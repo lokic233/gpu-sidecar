@@ -46,3 +46,31 @@ probe + freshness; lifecycle carries the smoothed history.
   but that device's `details[].ready` was false with reasons — correct multi-device behavior.
 - Stale telemetry: deterministic unit test `TestSupervisor_NotReadyWhenStale` (advance clock past
   max age without polling → `TELEMETRY_STALE`/`COLLECTOR_STALLED`).
+
+---
+
+## Round-3 update — multi-GPU aggregate + per-device readiness
+
+Host `/readyz` now returns explicit aggregate fields so partial multi-GPU failure is unambiguous:
+```json
+{
+  "control_plane_ready": true,
+  "any_device_ready": true,
+  "all_devices_ready": false,
+  "ready_device_count": 7,
+  "total_device_count": 8,
+  "details": [ { "device_id": "3", "ready": false, "reasons": ["GPU_NOT_ACCESSIBLE"] }, ... ]
+}
+```
+- **`control_plane_ready`** (== legacy `ready`): the sidecar collected, is not stalled, and can provide
+  trustworthy status for **at least one** managed device. This is sidecar control-plane readiness — it
+  is **NOT** proof that every GPU can receive traffic.
+- **`any_device_ready` / `all_devices_ready`**: make partial readiness explicit.
+- **`ready_device_count` / `total_device_count`**: counts for a router to reason about.
+- Backward-compat: `ready`, `ready_devices`, `total_devices` are retained as aliases.
+
+### Per-device readiness — `GET /readyz?device=N`
+- **200** when device N satisfies the readiness contract.
+- **503** when device N does not (with structured `reasons[]`).
+- **404** when N is not a managed device.
+Use this to decide traffic for a *specific* GPU; use host `/readyz` for sidecar control-plane health.

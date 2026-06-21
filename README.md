@@ -1,10 +1,17 @@
 # GPU Host Sidecar (cross-vendor: NVIDIA H100 + AMD MI350X)
 
-> **Round 2 — correctness-hardened.** Readiness now requires fresh+accessible telemetry (not just
-> GPU visibility); OFFLINE uses hard/soft-failure hysteresis; worker disappearance is reported with
+> **Round 3 — final correctness/semantics polish.** Recovery is now **latched** (no DEGRADED/BUSY
+> bypass of the hold+streak after OFFLINE); worker disappearance is **neutral by default** (only
+> confirmed-abnormal/OOM/rapid-restart evidence lowers stability); worker-event history is **bounded**
+> (age + size); default bind is **loopback-only**; host `/readyz` exposes **multi-GPU aggregate
+> fields** + a **per-device `/readyz?device=N`**. 112 tests, race-clean. Authoritative report:
+> `artifacts/final_polish/final_polish_report.md`.
+>
+> **Round 2 — correctness-hardened.** Readiness requires fresh+accessible telemetry (not just GPU
+> visibility); OFFLINE uses hard/soft-failure hysteresis; worker disappearance reported with
 > `termination_cause=unknown` (never a confirmed crash from count deltas); capacity is an explicit
 > `host_capacity_hint` (heuristic), not serving capacity; drain is POST-only/validated/idempotent.
-> 76 tests, race-clean. See `artifacts/final_hardening_report.md` and `artifacts/correctness_audit.md`.
+> See `artifacts/final_hardening_report.md` and `artifacts/correctness_audit.md`.
 
 A lightweight, user-space, single-binary sidecar that continuously and **truthfully** reports
 the current and historical condition of a GPU backend so a separate control plane (router /
@@ -65,11 +72,17 @@ scripts/launch_sidecar.sh 19095 3,4,6,7    # launch on a node (auto-detects vend
 scripts/backend_table.sh <h100_url> <mi350x_url>   # normalized table across both
 ```
 
+> **Bind address:** the sidecar defaults to **`127.0.0.1:9095` (loopback-only)** because the API
+> includes an unauthenticated mutation endpoint (`/v1/drain`). To expose it on a trusted mesh,
+> pass `--listen` explicitly (e.g. `--listen [::]:19095`); a WARNING is logged for non-loopback binds.
+> See `artifacts/api_security_notes.md`. No production security is claimed.
+
 ## Endpoints
 | Endpoint | Purpose |
 |---|---|
 | `/healthz` | sidecar **process** alive (always 200 if serving) |
-| `/readyz` | sidecar can currently inspect its GPU backend with **fresh, trustworthy** telemetry — requires collected + visible + accessible + last-probe-ok + telemetry-fresh + not-OFFLINE + collector-healthy (200/503, structured per-device `details[]`). See `artifacts/readiness_semantics.md` |
+| `/readyz` | **host control-plane** readiness: 200 if collected, not stalled, and ≥1 managed device is trustworthy/fresh/not-OFFLINE. Exposes `control_plane_ready`, `any_device_ready`, `all_devices_ready`, `ready_device_count`, `total_device_count` + per-device `details[]`. NOT proof every GPU can serve. See `artifacts/readiness_semantics.md` |
+| `/readyz?device=N` | **per-device** readiness: 200 ready / 503 not-ready / 404 unmanaged, with structured reason codes |
 | `/v1/status` | full normalized host+device state |
 | `/v1/history` | bounded recent time-series (`?device=N`) |
 | `/v1/events` | bounded transition/failure events |

@@ -16,8 +16,10 @@ correctness/security footgun (state change via GET) but does NOT claim productio
 - **Auditability** — drain events are recorded in-memory only (bounded ring), not to durable audit log.
 
 ## Deployment guidance (current safe posture)
-- Bind to **localhost or a trusted mesh interface only**. The `-listen` flag is configurable; default
-  `[::]:19095` exposes all interfaces and SHOULD be restricted in shared environments.
+- **The default bind is loopback-only: `127.0.0.1:9095`.** The unauthenticated mutation endpoint
+  (`/v1/drain`) is therefore not remotely reachable out of the box. Remote/mesh exposure requires an
+  **explicit `--listen` override** (e.g. `--listen [::]:19095`) on a **trusted network**; the sidecar
+  logs a WARNING when bound to a non-loopback address.
 - Read endpoints (`/healthz`, `/readyz`, `/v1/status`, `/v1/history`, `/v1/events`, `/metrics`) are
   non-mutating. The only mutation is `/v1/drain`.
 - For production: front with mTLS + an authz proxy, or add native mTLS + token authz and a durable

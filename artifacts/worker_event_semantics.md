@@ -50,3 +50,29 @@ On MI350X, `rocm-smi --showpids` per-card process attribution is unreliable — 
 for the busy card frequently stays 0 even with a live 25GB allocation (confirmed round 1 + round 2).
 Worker detection on AMD therefore leans on the memory-delta evidence. NVIDIA per-device proc counts
 (`--query-compute-apps`) are accurate.
+
+---
+
+## Round-3 update — disappearance is NEUTRAL to stability
+
+A `WORKER_DISAPPEARED` event with `termination_cause=unknown` is now **neutral**: it does NOT reduce
+`stability_score`. A disappearance alone (compute-process count / memory delta) cannot distinguish
+graceful shutdown, scale-down, rolling replacement, SIGTERM, SIGKILL, crash, OOM, or eviction.
+
+Stability is penalized ONLY by stronger evidence, reflected in the renamed score inputs:
+| Input | Penalizes? | Source |
+|---|---|---|
+| `WorkerDisappearancesObserved` | **No (neutral)** | count/memory delta — observability only |
+| `ConfirmedAbnormalWorkerExits` | yes | requires confirmed non-zero supervised exit / runtime health failure / cgroup abnormal-termination event (not available to a pure host sidecar today) |
+| `ConfirmedOOMEvents` | yes (strong) | confirmed OOM evidence |
+| `RapidRestartEvents` | yes | disappearance→reappearance within `rapidRestartSec` (10s) in the window — a flapping signal the host sidecar CAN observe |
+
+The host sidecar today populates only `WorkerDisappearancesObserved` (neutral) and `RapidRestartEvents`
+(from observed disappear/appear timing). Confirmed-abnormal/OOM inputs are wired but require a future
+supervised-process / cgroup / runtime integration to be non-zero.
+
+### Bounded worker-event history
+Disappearance/appearance timestamps are stored in a `workerEventLog` bounded by **BOTH** a max age
+(window pruning) AND a max size (ring cap). Old events are *removed*, not merely ignored during
+scoring. Verified by tests with 10k synthetic events (history stays bounded, old events age out of
+the scoring window, recent events retained, monotonic ordering preserved).

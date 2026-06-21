@@ -1,11 +1,20 @@
-# Final Report — Cross-Vendor GPU Host Sidecar
+# Final Report — Cross-Vendor GPU Host Sidecar  ⚠️ SUPERSEDED (Round-1 historical)
 
-> **CORRECTNESS UPDATE (Round 2):** This round-1 report used language like "SIGKILL crash detected"
-> and "effective_capacity". Those claims were corrected in the hardening round — the sidecar detects
-> worker *disappearance* (cause unknown), not crashes, and capacity is a host-derived heuristic.
-> See `final_hardening_report.md`, `worker_event_semantics.md`, and `capacity_semantics.md`.
+> **THIS IS A SUPERSEDED HISTORICAL DOCUMENT (Round 1).** It is retained for provenance only and is
+> NOT the authoritative current report. Its terminology and some claims do NOT match the current
+> implementation. The authoritative current report is **`artifacts/final_polish/final_polish_report.md`**
+> (with `artifacts/final_hardening_report.md` for the Round-2 correctness pass).
+>
+> Corrections that apply to everything below:
+> - "SIGKILL crash detected" → the harness issued SIGKILL; the sidecar only **independently observed
+>   worker disappearance** after the measured latency. The termination cause was NOT inferred by the sidecar.
+> - "effective_capacity" → renamed `host_capacity_hint`, an explicit **host-derived heuristic**, NOT
+>   runtime serving capacity.
+> - Readiness, OFFLINE/recovery behavior, and worker-event semantics described here predate the
+>   Round-2/Round-3 fixes (recovery latch, neutral disappearance, soft/hard hysteresis, per-device readiness).
+> - Default bind is now loopback-only (`127.0.0.1:9095`); no production security is claimed.
 
-## 1. Executive verdict
+## 1. Executive verdict (Round-1, historical)
 
 **IMPLEMENTED_AND_VALIDATED**
 
@@ -14,7 +23,7 @@ node (devgpu014) and the real AMD MI350X node (devgpu499). Both expose an identi
 JSON/Prometheus contract; vendor-specific gaps are marked `supported=false`, never faked. A mesh
 collector sees all 10 GPUs (4 H100 + 6 MI350X) over IPv6 in one normalized table. Real controlled
 GPU workloads (native CUDA + HIP) were observed on both vendors; worker start, BUSY transition,
-SIGKILL crash, sidecar disconnect/rejoin, and an injected probe-failure → OFFLINE → RECOVERING →
+worker disappearance (SIGKILL issued by harness; cause NOT inferred by sidecar), sidecar disconnect/rejoin, and an injected probe-failure → OFFLINE → RECOVERING →
 READY cycle were all detected with measured latencies and time-series evidence. The stability
 score demonstrably decays fast and recovers slowly (memory of instability) on both vendors. Unit
 tests cover parser, exec, lifecycle, and stability failure paths. The principal question is

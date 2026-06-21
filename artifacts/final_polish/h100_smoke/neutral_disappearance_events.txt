@@ -1,0 +1,2 @@
+WORKER_STARTED | cause: - | detail: compute process count increased
+WORKER_DISAPPEARED | cause: unknown | detail: compute process count decreased (cause NOT observable f
