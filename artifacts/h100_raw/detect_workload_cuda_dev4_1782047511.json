@@ -1,0 +1,1451 @@
+{
+  "device": "4",
+  "workload": "./bin/workload_cuda",
+  "launch_delay_procs_s": null,
+  "launch_delay_mem_s": null,
+  "launch_delay_busy_s": 3.269,
+  "stop_delay_s": null,
+  "poll_ms": 250,
+  "samples": [
+    {
+      "t": 0.008,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 0.259,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 0.51,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 0.761,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 1.013,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 1.264,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 1.516,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 1.767,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 2.019,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 2.271,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 2.523,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 2.774,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 3.025,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.0134
+    },
+    {
+      "t": 3.276,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 3.528,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 3.78,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 4.032,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 4.283,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 4.534,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 4.786,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 5.037,
+      "state": "BUSY",
+      "util": 97,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.0201
+    },
+    {
+      "t": 5.289,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 5.54,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 5.792,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 6.044,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 6.296,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 6.548,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 6.8,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 7.051,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 7.302,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 7.553,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 7.805,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 8.056,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 8.307,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 8.559,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 8.811,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 9.064,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 9.316,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 9.568,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 9.82,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 10.071,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 10.322,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 10.574,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 10.825,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 11.077,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 11.328,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 11.581,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 11.833,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 12.084,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 12.336,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 12.591,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 12.842,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.669
+    },
+    {
+      "t": 13.094,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 13.346,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 13.599,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 13.852,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 14.103,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 14.355,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 14.606,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 14.858,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 15.11,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 15.364,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 15.615,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 15.866,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 16.118,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 16.369,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 16.621,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 16.872,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 17.124,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 17.376,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 17.627,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 17.879,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 18.13,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 18.381,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 18.633,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 18.885,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 19.136,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 19.387,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 19.639,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 19.891,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9904,
+      "effcap": 0.669
+    },
+    {
+      "t": 20.142,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 20.394,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 20.645,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 20.897,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 21.148,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 21.4,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9905,
+      "effcap": 0.6691
+    },
+    {
+      "t": 21.651,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.6691
+    },
+    {
+      "t": 21.903,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.6691
+    },
+    {
+      "t": 22.155,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.6691
+    },
+    {
+      "t": 22.406,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.6691
+    },
+    {
+      "t": 22.658,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.6691
+    },
+    {
+      "t": 22.91,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.6691
+    },
+    {
+      "t": 23.161,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9906,
+      "effcap": 0.6691
+    },
+    {
+      "t": 23.412,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 23.665,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 23.917,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 24.168,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 24.42,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 24.671,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 24.923,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9907,
+      "effcap": 0.6692
+    },
+    {
+      "t": 25.175,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 25.426,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 25.677,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 25.929,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 26.18,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 26.431,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 26.682,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 26.934,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9908,
+      "effcap": 0.6693
+    },
+    {
+      "t": 27.185,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 27.436,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 27.687,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 27.939,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 28.19,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 28.442,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 28.694,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 28.946,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 29.197,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 29.448,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 29.7,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9909,
+      "effcap": 0.6693
+    },
+    {
+      "t": 29.952,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 30.203,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 30.455,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 30.706,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 30.957,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 31.209,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 31.46,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 31.712,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 31.963,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 32.214,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 32.466,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 32.717,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 32.968,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 33.219,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.991,
+      "effcap": 0.6694
+    },
+    {
+      "t": 33.471,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9911,
+      "effcap": 0.6695
+    },
+    {
+      "t": 33.723,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9911,
+      "effcap": 0.6695
+    },
+    {
+      "t": 33.974,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9911,
+      "effcap": 0.6695
+    },
+    {
+      "t": 34.227,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9911,
+      "effcap": 0.6695
+    },
+    {
+      "t": 34.478,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9911,
+      "effcap": 0.6695
+    },
+    {
+      "t": 34.73,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9911,
+      "effcap": 0.6695
+    },
+    {
+      "t": 34.982,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9911,
+      "effcap": 0.6695
+    },
+    {
+      "t": 35.233,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 35.484,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 35.736,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 35.987,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 36.238,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 36.49,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 36.741,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 36.992,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6695
+    },
+    {
+      "t": 37.243,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 37.495,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 37.746,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 37.997,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 38.25,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 38.501,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 38.754,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 39.005,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9912,
+      "effcap": 0.6696
+    },
+    {
+      "t": 39.257,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9913,
+      "effcap": 0.6696
+    },
+    {
+      "t": 39.509,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9913,
+      "effcap": 0.6696
+    },
+    {
+      "t": 39.761,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9913,
+      "effcap": 0.6696
+    },
+    {
+      "t": 40.012,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 32.76,
+      "procs": 1,
+      "stability": 0.9913,
+      "effcap": 0.6696
+    }
+  ]
+}
