@@ -1,0 +1,1397 @@
+{
+  "node": "mi350x",
+  "events": [
+    {
+      "t": 0.0,
+      "kind": "GROUND_TRUTH_baseline"
+    },
+    {
+      "t": 3.02,
+      "kind": "GROUND_TRUTH_inject_one_soft_failure",
+      "device": "5"
+    },
+    {
+      "t": 5.52,
+      "kind": "GROUND_TRUTH_clear_soft_failure"
+    },
+    {
+      "t": 10.53,
+      "kind": "GROUND_TRUTH_inject_sustained_soft_failures",
+      "device": "5"
+    },
+    {
+      "t": 19.55,
+      "kind": "SIDECAR_OBSERVED_offline",
+      "soft_failures": 3
+    },
+    {
+      "t": 19.55,
+      "kind": "GROUND_TRUTH_clear_failure_for_recovery"
+    },
+    {
+      "t": 27.59,
+      "kind": "SIDECAR_OBSERVED_recovering"
+    },
+    {
+      "t": 39.64,
+      "kind": "GROUND_TRUTH_drain_post",
+      "device": "5"
+    },
+    {
+      "t": 39.64,
+      "kind": "SIDECAR_drain_response",
+      "code": 200,
+      "resp": {
+        "changed": false,
+        "device": "5",
+        "draining": true
+      }
+    },
+    {
+      "t": 44.15,
+      "kind": "SIDECAR_drain_GET_rejected",
+      "code": 405,
+      "expect": 405
+    },
+    {
+      "t": 44.15,
+      "kind": "SIDECAR_undrain_response",
+      "code": 200,
+      "resp": {
+        "changed": false,
+        "device": "5",
+        "draining": false
+      }
+    }
+  ],
+  "offline_detect_after_sustained_s": 19.55,
+  "recovering_after_clear_s": 27.59,
+  "ready_after_clear_s": null,
+  "samples": [
+    {
+      "t": 0.01,
+      "phase": "baseline",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.9231,
+      "cap_hint": 0.921,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 0.51,
+      "phase": "baseline",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.9231,
+      "cap_hint": 0.921,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 1.01,
+      "phase": "baseline",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.9231,
+      "cap_hint": 0.921,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 1.52,
+      "phase": "baseline",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.9231,
+      "cap_hint": 0.921,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 2.02,
+      "phase": "baseline",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.9231,
+      "cap_hint": 0.921,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 2.52,
+      "phase": "baseline",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.9231,
+      "cap_hint": 0.921,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 5.52,
+      "phase": "one_soft_failure",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 1,
+      "hard_offline": false,
+      "stability": 0.8838,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED"
+      ]
+    },
+    {
+      "t": 8.53,
+      "phase": "after_soft_clear",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 1,
+      "hard_offline": false,
+      "stability": 0.8838,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED"
+      ]
+    },
+    {
+      "t": 9.03,
+      "phase": "after_soft_clear",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 1,
+      "hard_offline": false,
+      "stability": 0.8838,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED"
+      ]
+    },
+    {
+      "t": 9.53,
+      "phase": "after_soft_clear",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 1,
+      "hard_offline": false,
+      "stability": 0.8838,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED"
+      ]
+    },
+    {
+      "t": 10.03,
+      "phase": "after_soft_clear",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 1,
+      "hard_offline": false,
+      "stability": 0.8838,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED"
+      ]
+    },
+    {
+      "t": 10.53,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 1,
+      "hard_offline": false,
+      "stability": 0.8838,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED"
+      ]
+    },
+    {
+      "t": 11.54,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 12.54,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 13.54,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 14.54,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 15.54,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 16.54,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 17.55,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 18.55,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "DEGRADED",
+      "reason_codes": [
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 2,
+      "hard_offline": false,
+      "stability": 0.8381,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE"
+      ]
+    },
+    {
+      "t": 19.55,
+      "phase": "sustained_soft",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 19.55,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 20.06,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 20.56,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 21.06,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 21.56,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 22.07,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 22.57,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 23.07,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 23.57,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 24.07,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 24.58,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 25.08,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 25.58,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 26.08,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 26.59,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 27.09,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "OFFLINE",
+      "reason_codes": [
+        "OFFLINE_FAILURE_THRESHOLD_REACHED",
+        "PROBE_FAILURE"
+      ],
+      "soft_failures": 3,
+      "hard_offline": false,
+      "stability": 0.7929,
+      "cap_hint": 0,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": false,
+      "readyz_dev_reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "TELEMETRY_STALE",
+        "LIFECYCLE_OFFLINE"
+      ]
+    },
+    {
+      "t": 27.59,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 28.09,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 28.6,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 29.1,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 29.6,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 30.11,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 30.61,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 31.11,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 31.61,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 32.11,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 32.61,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 33.12,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 33.62,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 34.12,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 34.62,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 35.13,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.7998,
+      "cap_hint": 0.798,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 35.63,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 36.13,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 36.63,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 37.13,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 37.63,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 38.14,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 38.64,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 39.14,
+      "phase": "recovery",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 42.65,
+      "phase": "drained",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 43.15,
+      "phase": "drained",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 43.65,
+      "phase": "drained",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "RECOVERING",
+      "reason_codes": [
+        "RECOVERY_HOLD"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8045,
+      "cap_hint": 0.802,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 47.16,
+      "phase": "undrained",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "RECOVERY_STREAK_MET",
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8088,
+      "cap_hint": 0.807,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 47.66,
+      "phase": "undrained",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "RECOVERY_STREAK_MET",
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8088,
+      "cap_hint": 0.807,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    },
+    {
+      "t": 48.16,
+      "phase": "undrained",
+      "readyz_code": 200,
+      "readyz_ready": true,
+      "state": "READY",
+      "reason_codes": [
+        "RECOVERY_STREAK_MET",
+        "HEALTHY"
+      ],
+      "soft_failures": 0,
+      "hard_offline": false,
+      "stability": 0.8088,
+      "cap_hint": 0.807,
+      "cap_semantics": "heuristic_host_derived",
+      "readyz_dev_ready": true,
+      "readyz_dev_reasons": null
+    }
+  ]
+}
