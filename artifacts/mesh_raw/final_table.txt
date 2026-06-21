@@ -1,0 +1,12 @@
+BACKEND                      VENDOR   DEV  STATE        STABIL  EFFCAP HB_AGE_MS  FAILS FREEGB
+----------------------------------------------------------------------------------------------------
+devgpu014.eag3.facebook.com… nvidia   3    READY         0.999   0.994      1010      0  102.1
+devgpu014.eag3.facebook.com… nvidia   4    READY         0.987   0.982       579      0  102.1
+devgpu014.eag3.facebook.com… nvidia   6    READY         0.949   0.944      2127      0  102.1
+devgpu014.eag3.facebook.com… nvidia   7    READY         0.991   0.986      1715      0  102.1
+devgpu499.ldc2.facebook.com… amd      2    READY         0.998   0.996      4666      0  308.4
+devgpu499.ldc2.facebook.com… amd      3    READY         0.995   0.993      3303      0  308.4
+devgpu499.ldc2.facebook.com… amd      4    READY         0.997   0.994      1930      0  308.4
+devgpu499.ldc2.facebook.com… amd      5    READY         0.953   0.950      8978      0  308.4
+devgpu499.ldc2.facebook.com… amd      6    READY         0.995   0.992      7576      0  308.4
+devgpu499.ldc2.facebook.com… amd      7    READY         0.998   0.996      6053      0  308.4

@@ -1,0 +1,116 @@
+{
+  "count": 16,
+  "events": [
+    {
+      "timestamp": "2026-06-21T06:31:45.023870128-07:00",
+      "device_id": "3",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:31:45.439816681-07:00",
+      "device_id": "4",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:31:45.844999476-07:00",
+      "device_id": "6",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:31:46.258586927-07:00",
+      "device_id": "7",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:13.860581318-07:00",
+      "device_id": "6",
+      "kind": "DISCONNECT",
+      "detail": "probe/access failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:13.860581318-07:00",
+      "device_id": "6",
+      "kind": "STATE_TRANSITION",
+      "from": "READY",
+      "to": "OFFLINE",
+      "detail": "gpu not visible"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:13.860581318-07:00",
+      "device_id": "6",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:15.872485247-07:00",
+      "device_id": "6",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:17.849302956-07:00",
+      "device_id": "6",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:20.522740908-07:00",
+      "device_id": "6",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:22.235790241-07:00",
+      "device_id": "6",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:23.86130707-07:00",
+      "device_id": "6",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:25.867049158-07:00",
+      "device_id": "6",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:27.85428914-07:00",
+      "device_id": "6",
+      "kind": "REJOIN",
+      "to": "RECOVERING",
+      "detail": "probe recovered"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:27.85428914-07:00",
+      "device_id": "6",
+      "kind": "STATE_TRANSITION",
+      "from": "OFFLINE",
+      "to": "RECOVERING",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:32:33.882166117-07:00",
+      "device_id": "6",
+      "kind": "STATE_TRANSITION",
+      "from": "RECOVERING",
+      "to": "READY",
+      "detail": "healthy"
+    }
+  ]
+}

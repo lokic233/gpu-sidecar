@@ -1,0 +1,15 @@
+node,workload,file,start_s,busy_s,stop_s
+h100,cuda,detect_workload_cuda_dev4_1782047471.json,1.007,,
+h100,cuda,detect_workload_cuda_dev4_1782047511.json,,3.269,
+h100,cuda,detect_workload_cuda_dev4_1782047646.json,1.762,4.024,
+h100,cuda,detect_workload_cuda_dev4_1782047782.json,1.762,3.777,0.753
+h100,cuda,detect_workload_cuda_dev4_1782047895.json,1.007,6.54,1.759
+h100,cuda,detect_workload_cuda_dev4_1782047911.json,2.01,4.019,1.759
+h100,cuda,detect_workload_cuda_dev4_1782047927.json,1.76,3.772,1.76
+h100,cuda,detect_workload_cuda_dev4_1782047943.json,2.011,4.026,1.76
+h100,cuda,detect_workload_cuda_dev4_1782047959.json,4.276,6.037,1.255
+mi350x,hip,autodetect_workload_hip_1782048325.json,3.514,13.564,8.037
+mi350x,hip,autodetect_workload_hip_1782048567.json,6.032,,4.523
+mi350x,hip,autodetect_workload_hip_1782048585.json,5.782,,4.774
+mi350x,hip,autodetect_workload_hip_1782048604.json,6.03,,4.519
+mi350x,hip,autodetect_workload_hip_1782048621.json,5.781,,4.518

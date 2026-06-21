@@ -1,0 +1,101 @@
+{
+  "unreachable_detect_delay_s": 4.95,
+  "rejoin_detect_delay_s": 3.31,
+  "samples": [
+    {
+      "t": 0.01,
+      "phase": "up",
+      "reachable": true
+    },
+    {
+      "t": 0.51,
+      "phase": "up",
+      "reachable": true
+    },
+    {
+      "t": 1.01,
+      "phase": "up",
+      "reachable": true
+    },
+    {
+      "t": 1.51,
+      "phase": "up",
+      "reachable": true
+    },
+    {
+      "t": 2.01,
+      "phase": "up",
+      "reachable": true
+    },
+    {
+      "t": 2.51,
+      "phase": "up",
+      "reachable": true
+    },
+    {
+      "t": 7.97,
+      "phase": "down",
+      "reachable": false
+    },
+    {
+      "t": 10.97,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 11.27,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 11.57,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 11.87,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 12.17,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 12.47,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 12.77,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 13.07,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 13.38,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 13.68,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 13.98,
+      "phase": "restart",
+      "reachable": false
+    },
+    {
+      "t": 14.28,
+      "phase": "restart",
+      "reachable": true
+    }
+  ]
+}

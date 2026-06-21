@@ -1,0 +1,4 @@
+node,rss_mb,cpu_pct_one_core,n_dev,probe_p50_ms,probe_p95_ms,api_status_p50_ms,api_status_p95_ms,api_metrics_p50_ms,api_metrics_p95_ms
+h100,47.46,5.523,4,122.601,123.497,0.301,0.457,0.254,0.31
+mi350x,9.0,0.0,6,223.673,241.962,0.402,1.053,0.314,0.514
+mi350x,5.95,0.0,6,218.641,352.919,0.393,1.004,0.337,0.539

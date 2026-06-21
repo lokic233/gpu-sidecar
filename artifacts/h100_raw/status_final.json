@@ -1,0 +1,499 @@
+{
+  "sidecar_instance_id": "devgpu014.eag3.facebook.com-20260621T063139",
+  "hostname": "devgpu014.eag3.facebook.com",
+  "vendor": "nvidia",
+  "sidecar_version": "0.1.0",
+  "boot_id": "6033736e-8996-40fa-a500-ca438a2eee40",
+  "timestamp": "2026-06-21T06:46:37.891137158-07:00",
+  "uptime_seconds": 898.475229503,
+  "devices": [
+    {
+      "identity": {
+        "sidecar_instance_id": "devgpu014.eag3.facebook.com-20260621T063139",
+        "hostname": "devgpu014.eag3.facebook.com",
+        "backend_id": "devgpu014.eag3.facebook.com-gpu3",
+        "vendor": "nvidia",
+        "device_id": "3",
+        "gpu_model": "NVIDIA H100",
+        "gpu_uuid": "GPU-cfc7913d-4ea6-55f6-5702-091aee6cba4f",
+        "driver_version": "580.82.07",
+        "runtime_version": "13.0",
+        "boot_id": "6033736e-8996-40fa-a500-ca438a2eee40",
+        "sidecar_version": "0.1.0"
+      },
+      "health": {
+        "timestamp": "2026-06-21T06:46:37.023545086-07:00",
+        "heartbeat_ok": true,
+        "gpu_visible": true,
+        "gpu_accessible": true,
+        "utilization_gpu_pct": {
+          "value": 0,
+          "supported": true
+        },
+        "mem_used_bytes": {
+          "value": 4194304,
+          "supported": true
+        },
+        "mem_free_bytes": {
+          "value": 102082019328,
+          "supported": true
+        },
+        "mem_total_bytes": {
+          "value": 102625181696,
+          "supported": true
+        },
+        "temperature_c": {
+          "value": 37,
+          "supported": true
+        },
+        "power_watts": {
+          "value": 67.29,
+          "supported": true
+        },
+        "power_limit_watts": {
+          "value": 500,
+          "supported": true
+        },
+        "sm_clock_mhz": {
+          "value": 345,
+          "supported": true
+        },
+        "mem_clock_mhz": {
+          "value": 1593,
+          "supported": true
+        },
+        "compute_proc_count": {
+          "value": 0,
+          "supported": true
+        },
+        "effective_free_mem_ratio": 0.9947073188176273,
+        "probe_latency_ms": 122.43,
+        "ecc_uncorrectable_total": {
+          "value": 0,
+          "supported": true
+        },
+        "ecc_correctable_total": {
+          "value": 4602,
+          "supported": true
+        },
+        "nvidia_xid_errors": {
+          "value": null,
+          "supported": true
+        },
+        "amd_ras_uncorrectable": {
+          "value": 0,
+          "supported": false
+        },
+        "amd_ras_correctable": {
+          "value": 0,
+          "supported": false
+        },
+        "unsupported_fields": [
+          "amd_ras:nvidia-vendor"
+        ]
+      },
+      "lifecycle_state": "READY",
+      "reliability": {
+        "last_successful_probe": "2026-06-21T06:46:37.023478446-07:00",
+        "last_failed_probe": null,
+        "consecutive_probe_failures": 0,
+        "sidecar_start_count": 1,
+        "worker_starts_observed": 0,
+        "worker_stops_observed": 0,
+        "disconnect_count": 0,
+        "rejoin_count": 0,
+        "last_recovery_duration_ms": 0,
+        "recent_availability_ratio": 1,
+        "recent_failure_rate": 0,
+        "probe_latency_p50_ms": 122.045,
+        "probe_latency_p95_ms": 129.392,
+        "throughput_variance": {
+          "value": 0,
+          "supported": false
+        }
+      },
+      "stability": {
+        "score": 0.9985633162738342,
+        "components": {
+          "availability": 0.3,
+          "disconnect": 0.15,
+          "errors": 0.1,
+          "failures": 0.2,
+          "instantaneous": 0.9993311210345911,
+          "latency": 0.09933112103459107,
+          "recovery": 0.1,
+          "smoothed": 0.9985633162738342,
+          "throughput": 0.05
+        },
+        "updated_at": "2026-06-21T06:46:37.023478446-07:00"
+      },
+      "effective_capacity": 0.993278239000384
+    },
+    {
+      "identity": {
+        "sidecar_instance_id": "devgpu014.eag3.facebook.com-20260621T063139",
+        "hostname": "devgpu014.eag3.facebook.com",
+        "backend_id": "devgpu014.eag3.facebook.com-gpu4",
+        "vendor": "nvidia",
+        "device_id": "4",
+        "gpu_model": "NVIDIA H100",
+        "gpu_uuid": "GPU-d0f3354b-9037-590f-0147-38de359d948c",
+        "driver_version": "580.82.07",
+        "runtime_version": "13.0",
+        "boot_id": "6033736e-8996-40fa-a500-ca438a2eee40",
+        "sidecar_version": "0.1.0"
+      },
+      "health": {
+        "timestamp": "2026-06-21T06:46:37.431060069-07:00",
+        "heartbeat_ok": true,
+        "gpu_visible": true,
+        "gpu_accessible": true,
+        "utilization_gpu_pct": {
+          "value": 0,
+          "supported": true
+        },
+        "mem_used_bytes": {
+          "value": 4194304,
+          "supported": true
+        },
+        "mem_free_bytes": {
+          "value": 102082019328,
+          "supported": true
+        },
+        "mem_total_bytes": {
+          "value": 102625181696,
+          "supported": true
+        },
+        "temperature_c": {
+          "value": 36,
+          "supported": true
+        },
+        "power_watts": {
+          "value": 69.83,
+          "supported": true
+        },
+        "power_limit_watts": {
+          "value": 500,
+          "supported": true
+        },
+        "sm_clock_mhz": {
+          "value": 345,
+          "supported": true
+        },
+        "mem_clock_mhz": {
+          "value": 1593,
+          "supported": true
+        },
+        "compute_proc_count": {
+          "value": 0,
+          "supported": true
+        },
+        "effective_free_mem_ratio": 0.9947073188176273,
+        "probe_latency_ms": 120.278,
+        "ecc_uncorrectable_total": {
+          "value": 0,
+          "supported": true
+        },
+        "ecc_correctable_total": {
+          "value": 0,
+          "supported": true
+        },
+        "nvidia_xid_errors": {
+          "value": null,
+          "supported": true
+        },
+        "amd_ras_uncorrectable": {
+          "value": 0,
+          "supported": false
+        },
+        "amd_ras_correctable": {
+          "value": 0,
+          "supported": false
+        },
+        "unsupported_fields": [
+          "amd_ras:nvidia-vendor"
+        ]
+      },
+      "lifecycle_state": "READY",
+      "reliability": {
+        "last_successful_probe": "2026-06-21T06:46:37.431014671-07:00",
+        "last_failed_probe": null,
+        "consecutive_probe_failures": 0,
+        "sidecar_start_count": 1,
+        "worker_starts_observed": 0,
+        "worker_stops_observed": 0,
+        "disconnect_count": 0,
+        "rejoin_count": 0,
+        "last_recovery_duration_ms": 0,
+        "recent_availability_ratio": 1,
+        "recent_failure_rate": 0,
+        "probe_latency_p50_ms": 122.022,
+        "probe_latency_p95_ms": 259.829,
+        "throughput_variance": {
+          "value": 0,
+          "supported": false
+        }
+      },
+      "stability": {
+        "score": 0.9867222331082522,
+        "components": {
+          "availability": 0.3,
+          "disconnect": 0.15,
+          "errors": 0.1,
+          "failures": 0.2,
+          "instantaneous": 0.9874515342406379,
+          "latency": 0.08745153424063785,
+          "recovery": 0.1,
+          "smoothed": 0.9867222331082522,
+          "throughput": 0.05
+        },
+        "updated_at": "2026-06-21T06:46:37.431014671-07:00"
+      },
+      "effective_capacity": 0.9814998269128514
+    },
+    {
+      "identity": {
+        "sidecar_instance_id": "devgpu014.eag3.facebook.com-20260621T063139",
+        "hostname": "devgpu014.eag3.facebook.com",
+        "backend_id": "devgpu014.eag3.facebook.com-gpu6",
+        "vendor": "nvidia",
+        "device_id": "6",
+        "gpu_model": "NVIDIA H100",
+        "gpu_uuid": "GPU-d9a9eb48-5dd4-02d8-ecd2-f978c719ce85",
+        "driver_version": "580.82.07",
+        "runtime_version": "13.0",
+        "boot_id": "6033736e-8996-40fa-a500-ca438a2eee40",
+        "sidecar_version": "0.1.0"
+      },
+      "health": {
+        "timestamp": "2026-06-21T06:46:35.862430041-07:00",
+        "heartbeat_ok": true,
+        "gpu_visible": true,
+        "gpu_accessible": true,
+        "utilization_gpu_pct": {
+          "value": 0,
+          "supported": true
+        },
+        "mem_used_bytes": {
+          "value": 4194304,
+          "supported": true
+        },
+        "mem_free_bytes": {
+          "value": 102082019328,
+          "supported": true
+        },
+        "mem_total_bytes": {
+          "value": 102625181696,
+          "supported": true
+        },
+        "temperature_c": {
+          "value": 29,
+          "supported": true
+        },
+        "power_watts": {
+          "value": 67.16,
+          "supported": true
+        },
+        "power_limit_watts": {
+          "value": 500,
+          "supported": true
+        },
+        "sm_clock_mhz": {
+          "value": 345,
+          "supported": true
+        },
+        "mem_clock_mhz": {
+          "value": 1593,
+          "supported": true
+        },
+        "compute_proc_count": {
+          "value": 0,
+          "supported": true
+        },
+        "effective_free_mem_ratio": 0.9947073188176273,
+        "probe_latency_ms": 120.472,
+        "ecc_uncorrectable_total": {
+          "value": 0,
+          "supported": true
+        },
+        "ecc_correctable_total": {
+          "value": 1,
+          "supported": true
+        },
+        "nvidia_xid_errors": {
+          "value": null,
+          "supported": true
+        },
+        "amd_ras_uncorrectable": {
+          "value": 0,
+          "supported": false
+        },
+        "amd_ras_correctable": {
+          "value": 0,
+          "supported": false
+        },
+        "unsupported_fields": [
+          "amd_ras:nvidia-vendor"
+        ]
+      },
+      "lifecycle_state": "READY",
+      "reliability": {
+        "last_successful_probe": "2026-06-21T06:46:35.860674128-07:00",
+        "last_failed_probe": "2026-06-21T06:32:25.867049158-07:00",
+        "consecutive_probe_failures": 0,
+        "sidecar_start_count": 1,
+        "worker_starts_observed": 0,
+        "worker_stops_observed": 0,
+        "disconnect_count": 1,
+        "rejoin_count": 1,
+        "last_recovery_duration_ms": 13993,
+        "recent_availability_ratio": 1,
+        "recent_failure_rate": 0,
+        "probe_latency_p50_ms": 122.068,
+        "probe_latency_p95_ms": 272.733,
+        "throughput_variance": {
+          "value": 0,
+          "supported": false
+        }
+      },
+      "stability": {
+        "score": 0.9489942321227317,
+        "components": {
+          "availability": 0.3,
+          "disconnect": 0.15,
+          "errors": 0.1,
+          "failures": 0.2,
+          "instantaneous": 0.9490094194017151,
+          "latency": 0.08628587708854446,
+          "recovery": 0.06272354231317061,
+          "smoothed": 0.9489942321227317,
+          "throughput": 0.05
+        },
+        "updated_at": "2026-06-21T06:46:35.860674128-07:00"
+      },
+      "effective_capacity": 0.9439715082081955
+    },
+    {
+      "identity": {
+        "sidecar_instance_id": "devgpu014.eag3.facebook.com-20260621T063139",
+        "hostname": "devgpu014.eag3.facebook.com",
+        "backend_id": "devgpu014.eag3.facebook.com-gpu7",
+        "vendor": "nvidia",
+        "device_id": "7",
+        "gpu_model": "NVIDIA H100",
+        "gpu_uuid": "GPU-ce7ff7ee-99a3-7ed4-15d2-9d9423458018",
+        "driver_version": "580.82.07",
+        "runtime_version": "13.0",
+        "boot_id": "6033736e-8996-40fa-a500-ca438a2eee40",
+        "sidecar_version": "0.1.0"
+      },
+      "health": {
+        "timestamp": "2026-06-21T06:46:36.282415584-07:00",
+        "heartbeat_ok": true,
+        "gpu_visible": true,
+        "gpu_accessible": true,
+        "utilization_gpu_pct": {
+          "value": 0,
+          "supported": true
+        },
+        "mem_used_bytes": {
+          "value": 4194304,
+          "supported": true
+        },
+        "mem_free_bytes": {
+          "value": 102082019328,
+          "supported": true
+        },
+        "mem_total_bytes": {
+          "value": 102625181696,
+          "supported": true
+        },
+        "temperature_c": {
+          "value": 33,
+          "supported": true
+        },
+        "power_watts": {
+          "value": 67.1,
+          "supported": true
+        },
+        "power_limit_watts": {
+          "value": 500,
+          "supported": true
+        },
+        "sm_clock_mhz": {
+          "value": 345,
+          "supported": true
+        },
+        "mem_clock_mhz": {
+          "value": 1593,
+          "supported": true
+        },
+        "compute_proc_count": {
+          "value": 0,
+          "supported": true
+        },
+        "effective_free_mem_ratio": 0.9947073188176273,
+        "probe_latency_ms": 124.718,
+        "ecc_uncorrectable_total": {
+          "value": 0,
+          "supported": true
+        },
+        "ecc_correctable_total": {
+          "value": 0,
+          "supported": true
+        },
+        "nvidia_xid_errors": {
+          "value": null,
+          "supported": true
+        },
+        "amd_ras_uncorrectable": {
+          "value": 0,
+          "supported": false
+        },
+        "amd_ras_correctable": {
+          "value": 0,
+          "supported": false
+        },
+        "unsupported_fields": [
+          "amd_ras:nvidia-vendor"
+        ]
+      },
+      "lifecycle_state": "READY",
+      "reliability": {
+        "last_successful_probe": "2026-06-21T06:46:36.282367031-07:00",
+        "last_failed_probe": null,
+        "consecutive_probe_failures": 0,
+        "sidecar_start_count": 1,
+        "worker_starts_observed": 0,
+        "worker_stops_observed": 0,
+        "disconnect_count": 0,
+        "rejoin_count": 0,
+        "last_recovery_duration_ms": 0,
+        "recent_availability_ratio": 1,
+        "recent_failure_rate": 0,
+        "probe_latency_p50_ms": 122.78049999999999,
+        "probe_latency_p95_ms": 211.66819999999996,
+        "throughput_variance": {
+          "value": 0,
+          "supported": false
+        }
+      },
+      "stability": {
+        "score": 0.991960285359081,
+        "components": {
+          "availability": 0.3,
+          "disconnect": 0.15,
+          "errors": 0.1,
+          "failures": 0.2,
+          "instantaneous": 0.9919560426035803,
+          "latency": 0.09195604260358028,
+          "recovery": 0.1,
+          "smoothed": 0.991960285359081,
+          "throughput": 0.05
+        },
+        "updated_at": "2026-06-21T06:46:36.282367031-07:00"
+      },
+      "effective_capacity": 0.9867101558231
+    }
+  ]
+}

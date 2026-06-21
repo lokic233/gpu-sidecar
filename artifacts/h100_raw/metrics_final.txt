@@ -1,0 +1,126 @@
+# HELP gpu_sidecar_up 1 if sidecar process is alive
+# TYPE gpu_sidecar_up gauge
+gpu_sidecar_up{host="devgpu014.eag3.facebook.com"} 1
+# HELP gpu_sidecar_uptime_seconds sidecar uptime
+# TYPE gpu_sidecar_uptime_seconds gauge
+gpu_sidecar_uptime_seconds{host="devgpu014.eag3.facebook.com"} 898.484479
+# HELP gpu_stability_score normalized stability score [0,1]
+# TYPE gpu_stability_score gauge
+# HELP gpu_effective_capacity effective serving capacity [0,1]
+# TYPE gpu_effective_capacity gauge
+# HELP gpu_lifecycle_state 1 for the active lifecycle state label
+# TYPE gpu_lifecycle_state gauge
+# HELP gpu_utilization_pct GPU utilization percent
+# TYPE gpu_utilization_pct gauge
+# HELP gpu_mem_used_bytes GPU memory used bytes
+# TYPE gpu_mem_used_bytes gauge
+# HELP gpu_mem_free_bytes GPU memory free bytes
+# TYPE gpu_mem_free_bytes gauge
+# HELP gpu_temperature_celsius GPU temperature C
+# TYPE gpu_temperature_celsius gauge
+# HELP gpu_power_watts GPU power draw W
+# TYPE gpu_power_watts gauge
+# HELP gpu_probe_latency_ms telemetry probe latency ms
+# TYPE gpu_probe_latency_ms gauge
+# HELP gpu_consecutive_probe_failures consecutive probe failures
+# TYPE gpu_consecutive_probe_failures gauge
+# HELP gpu_recent_availability recent availability ratio
+# TYPE gpu_recent_availability gauge
+# HELP gpu_disconnect_count observed disconnects
+# TYPE gpu_disconnect_count counter
+# HELP gpu_rejoin_count observed rejoins
+# TYPE gpu_rejoin_count counter
+# HELP gpu_worker_starts_total observed worker starts
+# TYPE gpu_worker_starts_total counter
+# HELP gpu_worker_stops_total observed worker stops
+# TYPE gpu_worker_stops_total counter
+# HELP gpu_ecc_uncorrectable_total NVIDIA ECC uncorrectable (or AMD RAS)
+# TYPE gpu_ecc_uncorrectable_total counter
+gpu_stability_score{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0.998563
+gpu_effective_capacity{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0.993278
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",state="UNKNOWN"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",state="READY"} 1
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",state="BUSY"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",state="DEGRADED"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",state="DRAINING"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",state="OFFLINE"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",state="RECOVERING"} 0
+gpu_utilization_pct{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0.000000
+gpu_mem_used_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 4194304
+gpu_mem_free_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 102082019328
+gpu_temperature_celsius{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 37.000000
+gpu_power_watts{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 67.290000
+gpu_probe_latency_ms{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 122.430000
+gpu_consecutive_probe_failures{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0
+gpu_recent_availability{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 1.000000
+gpu_disconnect_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0
+gpu_rejoin_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0
+gpu_worker_starts_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0
+gpu_worker_stops_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0
+gpu_ecc_uncorrectable_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="3",backend="devgpu014.eag3.facebook.com-gpu3"} 0
+gpu_stability_score{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0.986722
+gpu_effective_capacity{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0.981500
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",state="UNKNOWN"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",state="READY"} 1
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",state="BUSY"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",state="DEGRADED"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",state="DRAINING"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",state="OFFLINE"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",state="RECOVERING"} 0
+gpu_utilization_pct{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0.000000
+gpu_mem_used_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 4194304
+gpu_mem_free_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 102082019328
+gpu_temperature_celsius{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 36.000000
+gpu_power_watts{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 69.830000
+gpu_probe_latency_ms{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 120.278000
+gpu_consecutive_probe_failures{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0
+gpu_recent_availability{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 1.000000
+gpu_disconnect_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0
+gpu_rejoin_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0
+gpu_worker_starts_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0
+gpu_worker_stops_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0
+gpu_ecc_uncorrectable_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="4",backend="devgpu014.eag3.facebook.com-gpu4"} 0
+gpu_stability_score{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 0.948994
+gpu_effective_capacity{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 0.943972
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",state="UNKNOWN"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",state="READY"} 1
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",state="BUSY"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",state="DEGRADED"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",state="DRAINING"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",state="OFFLINE"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",state="RECOVERING"} 0
+gpu_utilization_pct{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 0.000000
+gpu_mem_used_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 4194304
+gpu_mem_free_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 102082019328
+gpu_temperature_celsius{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 29.000000
+gpu_power_watts{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 67.160000
+gpu_probe_latency_ms{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 120.472000
+gpu_consecutive_probe_failures{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 0
+gpu_recent_availability{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 1.000000
+gpu_disconnect_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 1
+gpu_rejoin_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 1
+gpu_worker_starts_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 0
+gpu_worker_stops_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 0
+gpu_ecc_uncorrectable_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="6",backend="devgpu014.eag3.facebook.com-gpu6"} 0
+gpu_stability_score{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0.991960
+gpu_effective_capacity{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0.986710
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",state="UNKNOWN"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",state="READY"} 1
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",state="BUSY"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",state="DEGRADED"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",state="DRAINING"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",state="OFFLINE"} 0
+gpu_lifecycle_state{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",state="RECOVERING"} 0
+gpu_utilization_pct{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0.000000
+gpu_mem_used_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 4194304
+gpu_mem_free_bytes{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 102082019328
+gpu_temperature_celsius{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 33.000000
+gpu_power_watts{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 67.100000
+gpu_probe_latency_ms{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 124.718000
+gpu_consecutive_probe_failures{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0
+gpu_recent_availability{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 1.000000
+gpu_disconnect_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0
+gpu_rejoin_count{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0
+gpu_worker_starts_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0
+gpu_worker_stops_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0
+gpu_ecc_uncorrectable_total{host="devgpu014.eag3.facebook.com",vendor="nvidia",device="7",backend="devgpu014.eag3.facebook.com-gpu7"} 0

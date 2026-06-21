@@ -1,0 +1,16 @@
+field,nvidia_h100,amd_mi350x,nvidia_source,amd_source
+utilization_gpu_pct,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+mem_used_bytes,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+mem_free_bytes,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+mem_total_bytes,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+temperature_c,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+power_watts,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+power_limit_watts,yes,no,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+sm_clock_mhz,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+mem_clock_mhz,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+compute_proc_count,yes,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+ecc_uncorrectable_total,yes,no,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+ecc_correctable_total,yes,no,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+nvidia_xid_errors,yes,no,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+amd_ras_uncorrectable,no,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
+amd_ras_correctable,no,yes,nvidia-smi/dmesg,rocm-smi/--showrasinfo
