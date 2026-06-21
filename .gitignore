@@ -1,0 +1,5 @@
+/bin/
+*.log
+__pycache__/
+*.pyc
+/tmp/

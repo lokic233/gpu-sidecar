@@ -1,0 +1,178 @@
+// Package api exposes the sidecar over HTTP: health, readiness, status, history, events, metrics.
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/lokic233/gpu-sidecar/internal/core"
+	"github.com/lokic233/gpu-sidecar/internal/engine"
+)
+
+type Server struct {
+	sup     *engine.Supervisor
+	version string
+	mux     *http.ServeMux
+}
+
+func New(sup *engine.Supervisor, version string) *Server {
+	s := &Server{sup: sup, version: version, mux: http.NewServeMux()}
+	s.mux.HandleFunc("/healthz", s.healthz)
+	s.mux.HandleFunc("/readyz", s.readyz)
+	s.mux.HandleFunc("/v1/status", s.status)
+	s.mux.HandleFunc("/v1/history", s.history)
+	s.mux.HandleFunc("/v1/events", s.events)
+	s.mux.HandleFunc("/v1/drain", s.drain)
+	s.mux.HandleFunc("/metrics", s.metrics)
+	s.mux.HandleFunc("/", s.index)
+	return s
+}
+
+func (s *Server) Handler() http.Handler { return s.mux }
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(v)
+}
+
+// /healthz: confirms the sidecar PROCESS is alive. Always 200 if we can serve.
+func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"status": "alive", "version": s.version, "time": time.Now()})
+}
+
+// /readyz: confirms the sidecar can currently inspect its assigned GPU backend.
+func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
+	if s.sup.Ready() {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ready", "devices": s.sup.DeviceCount()})
+		return
+	}
+	writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "reason": "no inspectable GPU"})
+}
+
+func (s *Server) status(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.sup.HostStatus())
+}
+
+func (s *Server) history(w http.ResponseWriter, r *http.Request) {
+	pts := s.sup.History()
+	if dev := r.URL.Query().Get("device"); dev != "" {
+		var f []core.HistoryPoint
+		for _, p := range pts {
+			if p.DeviceID == dev {
+				f = append(f, p)
+			}
+		}
+		pts = f
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"count": len(pts), "points": pts})
+}
+
+func (s *Server) events(w http.ResponseWriter, r *http.Request) {
+	evs := s.sup.Events()
+	sort.Slice(evs, func(i, j int) bool { return evs[i].Timestamp.Before(evs[j].Timestamp) })
+	writeJSON(w, http.StatusOK, map[string]any{"count": len(evs), "events": evs})
+}
+
+// /v1/drain?device=N&on=true|false : operator drain toggle.
+func (s *Server) drain(w http.ResponseWriter, r *http.Request) {
+	dev := r.URL.Query().Get("device")
+	on, _ := strconv.ParseBool(r.URL.Query().Get("on"))
+	if ok := s.sup.SetDraining(dev, on); !ok {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "unknown device", "device": dev})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"device": dev, "draining": on})
+}
+
+// /metrics: Prometheus text exposition.
+func (s *Server) metrics(w http.ResponseWriter, r *http.Request) {
+	hs := s.sup.HostStatus()
+	var b strings.Builder
+	help := func(name, typ, help string) {
+		fmt.Fprintf(&b, "# HELP %s %s\n# TYPE %s %s\n", name, help, name, typ)
+	}
+	lbl := func(d core.DeviceStatus) string {
+		return fmt.Sprintf(`{host=%q,vendor=%q,device=%q,backend=%q}`,
+			hs.Hostname, hs.Vendor, d.Identity.DeviceID, d.Identity.BackendID)
+	}
+	help("gpu_sidecar_up", "gauge", "1 if sidecar process is alive")
+	fmt.Fprintf(&b, "gpu_sidecar_up{host=%q} 1\n", hs.Hostname)
+	help("gpu_sidecar_uptime_seconds", "gauge", "sidecar uptime")
+	fmt.Fprintf(&b, "gpu_sidecar_uptime_seconds{host=%q} %f\n", hs.Hostname, hs.UptimeSeconds)
+
+	help("gpu_stability_score", "gauge", "normalized stability score [0,1]")
+	help("gpu_effective_capacity", "gauge", "effective serving capacity [0,1]")
+	help("gpu_lifecycle_state", "gauge", "1 for the active lifecycle state label")
+	help("gpu_utilization_pct", "gauge", "GPU utilization percent")
+	help("gpu_mem_used_bytes", "gauge", "GPU memory used bytes")
+	help("gpu_mem_free_bytes", "gauge", "GPU memory free bytes")
+	help("gpu_temperature_celsius", "gauge", "GPU temperature C")
+	help("gpu_power_watts", "gauge", "GPU power draw W")
+	help("gpu_probe_latency_ms", "gauge", "telemetry probe latency ms")
+	help("gpu_consecutive_probe_failures", "gauge", "consecutive probe failures")
+	help("gpu_recent_availability", "gauge", "recent availability ratio")
+	help("gpu_disconnect_count", "counter", "observed disconnects")
+	help("gpu_rejoin_count", "counter", "observed rejoins")
+	help("gpu_worker_starts_total", "counter", "observed worker starts")
+	help("gpu_worker_stops_total", "counter", "observed worker stops")
+	help("gpu_ecc_uncorrectable_total", "counter", "NVIDIA ECC uncorrectable (or AMD RAS)")
+
+	states := []core.LifecycleState{core.StateUnknown, core.StateReady, core.StateBusy, core.StateDegraded, core.StateDraining, core.StateOffline, core.StateRecovering}
+	for _, d := range hs.Devices {
+		l := lbl(d)
+		fmt.Fprintf(&b, "gpu_stability_score%s %f\n", l, d.Stability.Score)
+		fmt.Fprintf(&b, "gpu_effective_capacity%s %f\n", l, d.EffectiveCapacity)
+		for _, st := range states {
+			v := 0
+			if d.LifecycleState == st {
+				v = 1
+			}
+			fmt.Fprintf(&b, "gpu_lifecycle_state{host=%q,vendor=%q,device=%q,state=%q} %d\n", hs.Hostname, hs.Vendor, d.Identity.DeviceID, st, v)
+		}
+		if d.Health.UtilizationGPU.Supported {
+			fmt.Fprintf(&b, "gpu_utilization_pct%s %f\n", l, d.Health.UtilizationGPU.Value)
+		}
+		if d.Health.MemUsedBytes.Supported {
+			fmt.Fprintf(&b, "gpu_mem_used_bytes%s %d\n", l, d.Health.MemUsedBytes.Value)
+		}
+		if d.Health.MemFreeBytes.Supported {
+			fmt.Fprintf(&b, "gpu_mem_free_bytes%s %d\n", l, d.Health.MemFreeBytes.Value)
+		}
+		if d.Health.TemperatureC.Supported {
+			fmt.Fprintf(&b, "gpu_temperature_celsius%s %f\n", l, d.Health.TemperatureC.Value)
+		}
+		if d.Health.PowerWatts.Supported {
+			fmt.Fprintf(&b, "gpu_power_watts%s %f\n", l, d.Health.PowerWatts.Value)
+		}
+		fmt.Fprintf(&b, "gpu_probe_latency_ms%s %f\n", l, d.Health.ProbeLatencyMs)
+		fmt.Fprintf(&b, "gpu_consecutive_probe_failures%s %d\n", l, d.Reliability.ConsecutiveFailures)
+		fmt.Fprintf(&b, "gpu_recent_availability%s %f\n", l, d.Reliability.RecentAvailability)
+		fmt.Fprintf(&b, "gpu_disconnect_count%s %d\n", l, d.Reliability.DisconnectCount)
+		fmt.Fprintf(&b, "gpu_rejoin_count%s %d\n", l, d.Reliability.RejoinCount)
+		fmt.Fprintf(&b, "gpu_worker_starts_total%s %d\n", l, d.Reliability.WorkerStarts)
+		fmt.Fprintf(&b, "gpu_worker_stops_total%s %d\n", l, d.Reliability.WorkerStops)
+		if d.Health.ECCUncorrectable.Supported {
+			fmt.Fprintf(&b, "gpu_ecc_uncorrectable_total%s %d\n", l, d.Health.ECCUncorrectable.Value)
+		} else if d.Health.RASUncorrectable.Supported {
+			fmt.Fprintf(&b, "gpu_ecc_uncorrectable_total%s %d\n", l, d.Health.RASUncorrectable.Value)
+		}
+	}
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(b.String()))
+}
+
+func (s *Server) index(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"service": "gpu-host-sidecar", "version": s.version,
+		"endpoints": []string{"/healthz", "/readyz", "/v1/status", "/v1/history", "/v1/events", "/v1/drain", "/metrics"},
+	})
+}
