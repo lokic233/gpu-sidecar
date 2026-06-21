@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -80,3 +81,46 @@ func TestRASParse(t *testing.T) {
 }
 
 func mustU(s string) uint64 { var v uint64; for _, c := range s { if c < '0' || c > '9' { return 0 }; v = v*10 + uint64(c-'0') }; return v }
+
+func TestNVFailureClassification(t *testing.T) {
+	// timeout => soft
+	if f := classifyNVFailure(true, ""); f.Class != core.FailureSoft || f.Reason != core.ReasonProbeTimeout {
+		t.Fatalf("timeout should be soft/timeout: %+v", f)
+	}
+	// definitive device-gone => hard
+	if f := classifyNVFailure(false, "No devices were found"); f.Class != core.FailureHard {
+		t.Fatalf("'No devices were found' should be hard: %+v", f)
+	}
+	if f := classifyNVFailure(false, "Unable to determine the device handle for GPU"); f.Class != core.FailureHard {
+		t.Fatalf("device handle error should be hard: %+v", f)
+	}
+	// generic transient => soft
+	if f := classifyNVFailure(false, "some transient error"); f.Class != core.FailureSoft {
+		t.Fatalf("generic error should be soft: %+v", f)
+	}
+}
+
+func TestAMDFailureClassification(t *testing.T) {
+	if f := classifyAMDFailure(true, ""); f.Class != core.FailureSoft || f.Reason != core.ReasonProbeTimeout {
+		t.Fatalf("timeout should be soft/timeout: %+v", f)
+	}
+	if f := classifyAMDFailure(false, "device not found"); f.Class != core.FailureHard {
+		t.Fatalf("'device not found' should be hard: %+v", f)
+	}
+	if f := classifyAMDFailure(false, "transient blip"); f.Class != core.FailureSoft {
+		t.Fatalf("generic error should be soft: %+v", f)
+	}
+}
+
+func TestFaultInjectHardMode(t *testing.T) {
+	dir := t.TempDir()
+	ff := dir + "/fault"
+	os.WriteFile(ff, []byte("failhard 0\n"), 0644)
+	os.Setenv("GPU_SIDECAR_FAULT_FILE", ff)
+	defer os.Unsetenv("GPU_SIDECAR_FAULT_FILE")
+	w := WrapFaultInject(NewGeneric())
+	h, _ := w.Sample("0", time.Second)
+	if h.ProbeFailure.Class != core.FailureHard {
+		t.Fatalf("failhard must produce hard ProbeFailure, got %+v", h.ProbeFailure)
+	}
+}

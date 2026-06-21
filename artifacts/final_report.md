@@ -1,5 +1,10 @@
 # Final Report — Cross-Vendor GPU Host Sidecar
 
+> **CORRECTNESS UPDATE (Round 2):** This round-1 report used language like "SIGKILL crash detected"
+> and "effective_capacity". Those claims were corrected in the hardening round — the sidecar detects
+> worker *disappearance* (cause unknown), not crashes, and capacity is a host-derived heuristic.
+> See `final_hardening_report.md`, `worker_event_semantics.md`, and `capacity_semantics.md`.
+
 ## 1. Executive verdict
 
 **IMPLEMENTED_AND_VALIDATED**
@@ -44,7 +49,7 @@ lower-fidelity for process attribution; amd-smi is permission-blocked).
 - Live telemetry: util, mem (used/free/total), temp 28-36C, power draw+limit, SM/mem clocks,
   compute procs, **ECC uncorrectable/correctable**, **XID (dmesg)** — all `supported=true`.
 - Detection (9 reps): worker-start median **1.76s** (p95 3.48s), BUSY median **4.02s** (p95 6.36s),
-  worker-stop median **1.76s**. SIGKILL crash detected in **2.14s**.
+  worker-stop median **1.76s**. SIGKILL issued by harness; sidecar detected worker **disappearance** (cause unknown) in **2.14s**.
 - Fault→OFFLINE in **1.51s**; OFFLINE→RECOVERING→READY in **7.53s**; score 0.98→0.64, recovery slow.
 
 ### AMD MI350X (devgpu499, 8×MI350X 288GB, gfx950, driver 6.16.6, ROCm 7.0)
@@ -85,7 +90,7 @@ AMD post-exit memory lag; absolute probe latency (NVIDIA ~122ms vs AMD ~224ms).
 | Worker start (detect) | 1.76s median | 5.78s median | proc/mem delta |
 | BUSY transition | 4.02s median | ~13.6s (1 sample) | util≥80% + 2-confirm hysteresis |
 | Worker stop (graceful) | 1.76s median | 4.52s median | proc/mem return to baseline |
-| SIGKILL crash | 2.14s (proc-based) | 3.57s (memory-based) | NVIDIA proc-count; AMD mem-delta (proc-count unreliable) |
+| SIGKILL → worker disappearance (cause unknown) | 2.14s (proc-delta) | 3.57s (mem-delta) | harness knows it was SIGKILL; sidecar only observes disappearance |
 | Fault → OFFLINE | 1.51s | 5.01s | ≥3 consecutive probe failures |
 | Recovery → RECOVERING | 1.51s | 6.52s | first healthy probe after OFFLINE |
 | RECOVERING → READY | 7.53s | 15.04s | 5s healthy hold + hysteresis |

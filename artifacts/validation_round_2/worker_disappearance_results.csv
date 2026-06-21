@@ -1,0 +1,4 @@
+node,event,termination_cause,evidence
+h100,WORKER_STARTED,-,prev=0 cur=1
+h100,WORKER_DISAPPEARED,unknown,prev=1 cur=0 mem_released=22023241728
+mi350x,(none),-,rocm-smi per-card proc attribution unreliable; proc_count stayed 0; memory-delta is the honest AMD signal

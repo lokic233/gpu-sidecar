@@ -1,0 +1,3 @@
+{"node":"h100","measurement":"idle-baseline post-hardening","devices_polled":4,"access_probe_each":true,
+ "cpu_pct_of_one_core":8.431,"cpu_sec_per_wall_sec":0.084,"rss_kb":44636,
+ "note":"CPU higher than round-1 (5.5%) because access-probe-each now runs every cycle, doubling nvidia-smi spawns (4 dev x 2 calls / 2s). Deliberate cost of the stricter readiness contract."}

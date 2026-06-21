@@ -1,0 +1,3 @@
+{"node":"mi350x","measurement":"idle-baseline post-hardening","devices_polled":6,"access_probe_each":true,
+ "cpu_pct_of_one_core":1.802,"cpu_sec_per_wall_sec":0.018,"rss_kb":18432,"ncpu":384,
+ "note":"384-core host; sidecar uses ~0.018 cpu-sec per wall-sec. rocm-smi probe ~220ms each."}

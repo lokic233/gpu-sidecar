@@ -1,5 +1,11 @@
 # GPU Host Sidecar (cross-vendor: NVIDIA H100 + AMD MI350X)
 
+> **Round 2 — correctness-hardened.** Readiness now requires fresh+accessible telemetry (not just
+> GPU visibility); OFFLINE uses hard/soft-failure hysteresis; worker disappearance is reported with
+> `termination_cause=unknown` (never a confirmed crash from count deltas); capacity is an explicit
+> `host_capacity_hint` (heuristic), not serving capacity; drain is POST-only/validated/idempotent.
+> 76 tests, race-clean. See `artifacts/final_hardening_report.md` and `artifacts/correctness_audit.md`.
+
 A lightweight, user-space, single-binary sidecar that continuously and **truthfully** reports
 the current and historical condition of a GPU backend so a separate control plane (router /
 scheduler) can make routing and capacity decisions. It is **host-level infrastructure** — not an
@@ -63,11 +69,11 @@ scripts/backend_table.sh <h100_url> <mi350x_url>   # normalized table across bot
 | Endpoint | Purpose |
 |---|---|
 | `/healthz` | sidecar **process** alive (always 200 if serving) |
-| `/readyz` | sidecar can currently **inspect** its GPU backend (200/503) |
+| `/readyz` | sidecar can currently inspect its GPU backend with **fresh, trustworthy** telemetry — requires collected + visible + accessible + last-probe-ok + telemetry-fresh + not-OFFLINE + collector-healthy (200/503, structured per-device `details[]`). See `artifacts/readiness_semantics.md` |
 | `/v1/status` | full normalized host+device state |
 | `/v1/history` | bounded recent time-series (`?device=N`) |
 | `/v1/events` | bounded transition/failure events |
-| `/v1/drain?device=N&on=true` | operator graceful-drain toggle |
+| `POST /v1/drain` | operator graceful-drain toggle (**POST/PUT only**, GET→405); JSON `{"device":"N","on":true}`; validated, idempotent, audited. See `artifacts/api_security_notes.md` |
 | `/metrics` | Prometheus exposition |
 
 The status response distinguishes: sidecar-alive-but-GPU-inaccessible, GPU-visible-but-unhealthy,

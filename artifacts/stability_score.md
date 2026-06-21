@@ -1,5 +1,7 @@
 # Stability Score
 
+> **Superseded in part by Round 2 (correctness).** See `final_hardening_report.md`, `readiness_semantics.md`, `lifecycle_hysteresis.md`, `worker_event_semantics.md`, `capacity_semantics.md`. Notably: `effective_capacity`→`host_capacity_hint` (heuristic); OFFLINE now uses hard/soft hysteresis; lifecycle exposes `reason_codes`.
+
 Source: `internal/core/stability.go`. Tested in `stability_test.go`.
 An **operational** signal in [0,1] — explicitly NOT a universal scientific metric. Fully transparent:
 the formula is a weighted sum of bounded sub-scores, and every component is exposed in

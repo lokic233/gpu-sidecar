@@ -1,5 +1,7 @@
 # Normalized Cross-Vendor Schema
 
+> **Superseded in part by Round 2 (correctness).** See `final_hardening_report.md`, `readiness_semantics.md`, `lifecycle_hysteresis.md`, `worker_event_semantics.md`, `capacity_semantics.md`. Notably: `effective_capacity`→`host_capacity_hint` (heuristic); OFFLINE now uses hard/soft hysteresis; lifecycle exposes `reason_codes`.
+
 The sidecar exposes one JSON contract for both NVIDIA and AMD. Every metric is wrapped in a
 `Field{value, supported}` so consumers can distinguish "real value" from "not available on this
 vendor/tool". Source: `internal/core/model.go`.
