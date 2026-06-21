@@ -148,6 +148,8 @@ type LifecycleInfo struct {
 	HealthyStreak          int            `json:"healthy_streak"`
 	RecoveryStreakRequired int            `json:"recovery_streak_required"`
 	HardOffline            bool           `json:"hard_offline"` // true if entered via definitive hard-offline evidence
+	RecoveryLatched        bool           `json:"recovery_latched"`        // true while a post-OFFLINE device must pass hold+streak
+	RecoveryHealthyStreak  int            `json:"recovery_healthy_streak"` // consecutive healthy probes accrued toward release
 }
 
 // CapacityHint is an explicitly-heuristic, host-derived pressure signal.

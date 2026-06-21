@@ -72,10 +72,21 @@ type StabilityInputs struct {
 	LatencyP95Ms        float64
 	LatencyP50Ms        float64
 	ThroughputVariance  float64 // coefficient of variation, when enabled; <0 = disabled
-	// AbnormalDisappearances counts worker processes that vanished in the recent window WITHOUT a
-	// confirmed cause. This is an OBSERVED signal (count/memory delta), NOT a confirmed crash count.
-	// Renamed from the former misleading "ProcessCrashes" — the host sidecar cannot confirm crashes.
-	AbnormalDisappearances int
+
+	// --- Worker signals ---
+	// WorkerDisappearancesObserved counts worker processes that vanished in the recent window with
+	// UNKNOWN cause. This is NEUTRAL by default: a disappearance may be a graceful stop, scale-down,
+	// rolling replacement, SIGTERM, SIGKILL, crash, OOM, or eviction — the host sidecar cannot tell.
+	// It does NOT reduce the stability score. It is carried only for observability/auditing.
+	WorkerDisappearancesObserved int
+	// ConfirmedAbnormalWorkerExits counts disappearances correlated with STRONGER evidence (non-zero
+	// supervised exit, confirmed OOM, runtime health failure, vendor error, GPU access failure,
+	// cgroup/container abnormal-termination event). These DO reduce the score.
+	ConfirmedAbnormalWorkerExits int
+	// ConfirmedOOMEvents counts confirmed out-of-memory terminations in the window (strong penalty).
+	ConfirmedOOMEvents int
+	// RapidRestartEvents counts rapid disappearance/restart loops in the window (instability signal).
+	RapidRestartEvents int
 }
 
 // instantaneous computes the unsmoothed [0,1] score and its components.
@@ -112,10 +123,17 @@ func (s *StabilityCalc) instantaneous(in StabilityInputs) (float64, map[string]f
 		thrScore = clamp01(1.0 - in.ThroughputVariance*2.0) // CoV 0.5 => 0
 	}
 
-	// abnormal (unexplained) worker disappearances add a mild penalty folded into the failures
-	// component. This is NOT a crash count — cause is unknown (see worker_event_semantics.md).
-	if in.AbnormalDisappearances > 0 {
-		failScore *= math.Exp(-0.5 * float64(in.AbnormalDisappearances))
+	// Worker termination penalty: ONLY confirmed-abnormal evidence and rapid-restart loops reduce
+	// the score. Unknown disappearances (WorkerDisappearancesObserved) are NEUTRAL by default — a
+	// disappearance alone (count/memory delta) is not evidence of a problem. See worker_event_semantics.md.
+	if in.ConfirmedAbnormalWorkerExits > 0 {
+		failScore *= math.Exp(-0.6 * float64(in.ConfirmedAbnormalWorkerExits))
+	}
+	if in.ConfirmedOOMEvents > 0 {
+		failScore *= math.Exp(-0.8 * float64(in.ConfirmedOOMEvents)) // OOM is a strong instability signal
+	}
+	if in.RapidRestartEvents > 0 {
+		failScore *= math.Exp(-0.4 * float64(in.RapidRestartEvents))
 	}
 
 	comps := map[string]float64{

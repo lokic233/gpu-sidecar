@@ -48,12 +48,32 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "alive", "version": s.version, "time": time.Now()})
 }
 
-// /readyz: confirms the sidecar can currently inspect its assigned GPU backend with TRUSTWORTHY,
-// FRESH telemetry. Returns 503 with structured reasons if not ready. See readiness_semantics.md.
+// /readyz: host-level control-plane readiness, OR per-device readiness with ?device=N.
+//
+// Host /readyz: 200 if the sidecar has collected, is not stalled, and can provide trustworthy
+// status for at least one managed device (control-plane readiness — NOT proof every GPU can serve).
+// Response exposes any_device_ready / all_devices_ready / ready_device_count / total_device_count.
+//
+// /readyz?device=N: 200 if that specific device satisfies readiness, 503 if not, 404 if unmanaged.
 func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
-	res := s.sup.Readiness(time.Now())
+	now := time.Now()
+	if dev := r.URL.Query().Get("device"); dev != "" {
+		dr, found := s.sup.DeviceReadiness(dev, now)
+		if !found {
+			writeJSON(w, http.StatusNotFound, map[string]any{
+				"error": "unmanaged device", "device": dev})
+			return
+		}
+		code := http.StatusOK
+		if !dr.Ready {
+			code = http.StatusServiceUnavailable
+		}
+		writeJSON(w, code, dr)
+		return
+	}
+	res := s.sup.Readiness(now)
 	code := http.StatusOK
-	if !res.Ready {
+	if !res.ControlPlaneReady {
 		code = http.StatusServiceUnavailable
 	}
 	writeJSON(w, code, res)

@@ -60,6 +60,13 @@ type LifecycleMachine struct {
 	healthyStreak int // consecutive healthy probes (used for recovery promotion)
 	hardOffline  bool // whether current OFFLINE was entered via definitive hard evidence
 
+	// Recovery latch: once a device goes OFFLINE, recovery remains latched until BOTH the hold
+	// duration AND the healthy-probe streak are satisfied. Low stability / high util / transient
+	// soft degradation during recovery do NOT clear the latch — they only annotate reason codes.
+	recoveryLatched      bool
+	recoveryStartedAt    time.Duration
+	recoveryHealthyStreak int
+
 	offlineSince   time.Duration
 	recoverStart   time.Duration
 	hasBeenOffline bool
@@ -105,6 +112,8 @@ func (m *LifecycleMachine) Info() LifecycleInfo {
 		HealthyStreak:           m.healthyStreak,
 		RecoveryStreakRequired:  m.cfg.RecoveryStreak,
 		HardOffline:             m.hardOffline,
+		RecoveryLatched:         m.recoveryLatched,
+		RecoveryHealthyStreak:   m.recoveryHealthyStreak,
 	}
 }
 
@@ -174,12 +183,14 @@ func (m *LifecycleMachine) Step(o LifecycleObservation) (LifecycleState, bool) {
 	if hard {
 		m.softFailures = 0
 		m.healthyStreak = 0
+		m.recoveryHealthyStreak = 0
 		m.reasonCodes = m.hardReasons(o)
 		if m.state != StateOffline {
 			m.offlineSince = o.Mono
 			m.hasBeenOffline = true
 		}
 		m.hardOffline = true
+		m.recoveryLatched = true // latch recovery: any return must pass through RECOVERING+hold+streak
 		m.state, m.pending, m.pendingCount = StateOffline, StateOffline, 0
 		return m.state, prev != m.state
 	}
@@ -187,6 +198,7 @@ func (m *LifecycleMachine) Step(o LifecycleObservation) (LifecycleState, bool) {
 	if soft {
 		m.softFailures++
 		m.healthyStreak = 0
+		m.recoveryHealthyStreak = 0 // a soft failure interrupts any recovery streak
 		// Threshold reached => OFFLINE (soft-offline).
 		if m.softFailures >= m.cfg.OfflineFailures {
 			m.reasonCodes = []string{ReasonOfflineThreshold, m.softReason(o)}
@@ -195,14 +207,23 @@ func (m *LifecycleMachine) Step(o LifecycleObservation) (LifecycleState, bool) {
 				m.hasBeenOffline = true
 			}
 			m.hardOffline = false
+			m.recoveryLatched = true // re-latch
 			m.state, m.pending, m.pendingCount = StateOffline, StateOffline, 0
 			return m.state, prev != m.state
 		}
-		// Below threshold => DEGRADED (unless already OFFLINE, stay OFFLINE).
+		// Below threshold and already OFFLINE => stay OFFLINE.
 		if m.state == StateOffline {
 			m.reasonCodes = []string{m.softReason(o)}
 			return m.state, false
 		}
+		// Below threshold WHILE recovery is latched => stay RECOVERING (do NOT drop to DEGRADED;
+		// the latch keeps the externally visible state at RECOVERING, annotated with the soft reason).
+		if m.recoveryLatched {
+			m.state = StateRecovering
+			m.reasonCodes = []string{ReasonRecoveryHold, m.softReason(o)}
+			return m.state, prev != m.state
+		}
+		// Otherwise (not latched) => DEGRADED.
 		m.reasonCodes = []string{m.softReason(o)}
 		changed := m.state != StateDegraded
 		m.state, m.pending, m.pendingCount = StateDegraded, StateDegraded, 0
@@ -213,34 +234,45 @@ func (m *LifecycleMachine) Step(o LifecycleObservation) (LifecycleState, bool) {
 	m.softFailures = 0
 	m.healthyStreak++
 
-	// Recovery from OFFLINE: pass through RECOVERING.
+	// Recovery from OFFLINE: enter RECOVERING and begin tracking recovery progress.
 	if m.state == StateOffline {
 		m.state = StateRecovering
 		m.recoverStart = o.Mono
+		m.recoveryStartedAt = o.Mono
+		m.recoveryHealthyStreak = 1
 		m.pending, m.pendingCount = StateRecovering, 0
 		m.reasonCodes = []string{ReasonRecoveryHold}
 		return m.state, true
 	}
 
-	if m.state == StateRecovering {
-		held := (o.Mono - m.recoverStart).Seconds()
+	// While the recovery latch is engaged, the device STAYS RECOVERING regardless of how a healthy
+	// probe would otherwise classify (READY/BUSY/DEGRADED). Degraded/busy conditions only annotate
+	// reason codes. The device leaves recovery ONLY when BOTH the hold duration AND the consecutive
+	// healthy-probe streak are satisfied. No path through DEGRADED/BUSY can bypass this.
+	if m.recoveryLatched {
+		m.recoveryHealthyStreak++
+		held := (o.Mono - m.recoveryStartedAt).Seconds()
 		target, reasons := m.classifyHealthy(o)
-		if target == StateDegraded { // re-degraded during recovery
-			m.state = StateDegraded
-			m.reasonCodes = reasons
-			return m.state, true
-		}
-		// Promote only after BOTH hold time AND healthy streak satisfied.
-		if held >= m.cfg.RecoveringHoldSec && m.healthyStreak >= m.cfg.RecoveryStreak {
+		if held >= m.cfg.RecoveringHoldSec && m.recoveryHealthyStreak >= m.cfg.RecoveryStreak {
+			// release the latch and promote to the classified healthy state
+			m.recoveryLatched = false
 			m.state = target
+			m.pending, m.pendingCount = target, 0
 			m.reasonCodes = append([]string{ReasonRecoveryStreakMet}, reasons...)
 			return m.state, prev != m.state
 		}
-		m.reasonCodes = []string{ReasonRecoveryHold}
-		return m.state, false // stay RECOVERING
+		// still latched: remain RECOVERING. If the classification is degraded/busy, surface it as
+		// a reason code so a consumer sees WHY recovery is taking longer, without changing state.
+		m.state = StateRecovering
+		rc := []string{ReasonRecoveryHold}
+		if target == StateDegraded || target == StateBusy {
+			rc = append(rc, reasons...)
+		}
+		m.reasonCodes = rc
+		return m.state, prev != m.state
 	}
 
-	// Normal hysteresis for healthy-state changes.
+	// Normal hysteresis for healthy-state changes (no recovery latch active).
 	target, reasons := m.classifyHealthy(o)
 	if target == m.state {
 		m.pending, m.pendingCount = target, 0
@@ -250,7 +282,7 @@ func (m *LifecycleMachine) Step(o LifecycleObservation) (LifecycleState, bool) {
 	// Leaving DEGRADED to a healthy target applies immediately: the degrading condition
 	// (soft failure / low stability / errors) has cleared on this probe. This is the documented
 	// "one successful probe -> READY" recovery from a transient soft failure. It is NOT OFFLINE
-	// flapping (OFFLINE recovery is gated through RECOVERING separately).
+	// flapping (OFFLINE recovery is gated through RECOVERING + the latch separately).
 	if m.state == StateDegraded && (target == StateReady || target == StateBusy) {
 		m.state = target
 		m.pending, m.pendingCount = target, 0
@@ -276,6 +308,7 @@ func (m *LifecycleMachine) Step(o LifecycleObservation) (LifecycleState, bool) {
 	m.reasonCodes = reasons
 	return m.state, false
 }
+
 
 func (m *LifecycleMachine) hardReasons(o LifecycleObservation) []string {
 	var r []string

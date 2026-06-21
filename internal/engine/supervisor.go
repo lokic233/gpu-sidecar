@@ -8,6 +8,11 @@ import (
 	"github.com/lokic233/gpu-sidecar/internal/core"
 )
 
+// rapidRestartSec: a worker that disappears and reappears within this window is counted as a
+// rapid-restart (flapping) event — the only worker signal (besides confirmed evidence the host
+// sidecar lacks) that penalizes stability. See worker_event_semantics.md.
+const rapidRestartSec = 10.0
+
 // deviceState bundles the per-device runtime objects.
 type deviceState struct {
 	identity core.Identity
@@ -26,20 +31,72 @@ type deviceState struct {
 	lastSampleMono time.Duration // monotonic time of last successful sample
 
 	// honest worker tracking
-	workerSeen      bool            // have we ever observed a worker present
-	disappearances  []time.Duration // monotonic timestamps of abnormal worker disappearances
+	workerSeen     bool       // have we ever observed a worker present
+	workerEvents   *workerEventLog // bounded, time-windowed disappearance/appearance log
 }
 
-// abnormalDisappearancesInWindow counts recent abnormal worker disappearances (cause unknown).
-func (ds *deviceState) abnormalDisappearancesInWindow(now time.Duration) int {
-	cutoff := now - 120*time.Second
-	c := 0
-	for _, t := range ds.disappearances {
-		if t >= cutoff {
-			c++
+// workerEventLog is a bounded, time-windowed record of worker appearance/disappearance events.
+// Used for NEUTRAL observability and rapid-restart detection. Memory is bounded by BOTH a max
+// size (ring) AND a max age (window pruning). See worker_event_semantics.md / bounded-history.
+type workerEventLog struct {
+	disappearances []time.Duration // monotonic timestamps (pruned)
+	appearances    []time.Duration // monotonic timestamps (pruned)
+	windowSec      float64
+	maxEntries     int
+}
+
+func newWorkerEventLog(windowSec float64, maxEntries int) *workerEventLog {
+	return &workerEventLog{windowSec: windowSec, maxEntries: maxEntries}
+}
+
+func pruneTimes(s []time.Duration, now time.Duration, windowSec float64, maxEntries int) []time.Duration {
+	cutoff := now - time.Duration(windowSec*float64(time.Second))
+	// drop entries older than the window
+	i := 0
+	for i < len(s) && s[i] < cutoff {
+		i++
+	}
+	s = s[i:]
+	// cap size: keep the most recent maxEntries
+	if len(s) > maxEntries {
+		s = s[len(s)-maxEntries:]
+	}
+	return s
+}
+
+func (w *workerEventLog) recordDisappearance(now time.Duration) {
+	w.disappearances = append(w.disappearances, now)
+	w.disappearances = pruneTimes(w.disappearances, now, w.windowSec, w.maxEntries)
+}
+
+func (w *workerEventLog) recordAppearance(now time.Duration) {
+	w.appearances = append(w.appearances, now)
+	w.appearances = pruneTimes(w.appearances, now, w.windowSec, w.maxEntries)
+}
+
+// disappearancesInWindow returns the count of NEUTRAL disappearances in the recent window.
+func (w *workerEventLog) disappearancesInWindow(now time.Duration) int {
+	w.disappearances = pruneTimes(w.disappearances, now, w.windowSec, w.maxEntries)
+	return len(w.disappearances)
+}
+
+// rapidRestartEvents counts disappearance→appearance pairs that occurred within rapidRestartSec of
+// each other in the window — an instability signal (a worker flapping). This is the only worker
+// signal (besides confirmed evidence, which the host sidecar lacks) that penalizes stability.
+func (w *workerEventLog) rapidRestartEvents(now time.Duration, rapidRestartSec float64) int {
+	w.disappearances = pruneTimes(w.disappearances, now, w.windowSec, w.maxEntries)
+	w.appearances = pruneTimes(w.appearances, now, w.windowSec, w.maxEntries)
+	thresh := time.Duration(rapidRestartSec * float64(time.Second))
+	count := 0
+	for _, d := range w.disappearances {
+		for _, a := range w.appearances {
+			if a > d && a-d <= thresh {
+				count++
+				break
+			}
 		}
 	}
-	return c
+	return count
 }
 
 // Supervisor runs the probe loop and maintains normalized state for one host.
@@ -140,6 +197,7 @@ func (s *Supervisor) Init(deviceFilter []string) error {
 			machine:  core.NewLifecycleMachine(s.lifeCfg),
 			stab:     core.NewStabilityCalc(s.stabCfg),
 			hist:     core.NewDeviceHistory(s.probeRingCap, s.pointRingCap, s.eventRingCap, s.winSec),
+			workerEvents: newWorkerEventLog(s.winSec, s.eventRingCap),
 		}
 		ds.hist.MarkSidecarStart()
 		s.devices[id.DeviceID] = ds
@@ -225,7 +283,10 @@ func (s *Supervisor) pollDevice(devID string) {
 		LatencyP50Ms:        rel.ProbeLatencyP50Ms,
 		LatencyP95Ms:        rel.ProbeLatencyP95Ms,
 		ThroughputVariance:  thrVar,
-		AbnormalDisappearances: ds.abnormalDisappearancesInWindow(mono),
+		// Neutral observation: unknown disappearances do NOT penalize the score.
+		WorkerDisappearancesObserved: ds.workerEvents.disappearancesInWindow(mono),
+		// Only rapid restart loops penalize (the host sidecar has no confirmed-abnormal-exit/OOM source).
+		RapidRestartEvents: ds.workerEvents.rapidRestartEvents(mono, rapidRestartSec),
 	}
 	stab := ds.stab.Update(stabIn, wall)
 
@@ -335,6 +396,7 @@ func (s *Supervisor) detectWorkers(ds *deviceState, devID string, h core.Health,
 			ds.hist.MarkWorkerStart()
 		}
 		ds.workerSeen = true
+		ds.workerEvents.recordAppearance(mono)
 		ds.hist.AddEvent(core.Event{Timestamp: wall, DeviceID: devID, Kind: core.EventWorkerStarted,
 			Detail: "compute process count increased",
 			Evidence: map[string]any{"previous_process_count": prev.Value, "current_process_count": h.ComputeProcs.Value}})
@@ -342,9 +404,9 @@ func (s *Supervisor) detectWorkers(ds *deviceState, devID string, h core.Health,
 		for i := 0; i < prev.Value-h.ComputeProcs.Value; i++ {
 			ds.hist.MarkWorkerStop()
 		}
-		ds.disappearances = append(ds.disappearances, mono)
+		ds.workerEvents.recordDisappearance(mono)
 		ds.hist.AddEvent(core.Event{Timestamp: wall, DeviceID: devID, Kind: core.EventWorkerDisappeared,
-			Detail: "compute process count decreased (cause not observable from host signals)",
+			Detail: "compute process count decreased (cause NOT observable from host signals — neutral)",
 			TerminationCause: core.CauseUnknown, GroundTruthSource: "",
 			Evidence: map[string]any{
 				"previous_process_count": prev.Value,
@@ -473,11 +535,21 @@ func (s *Supervisor) SetMaxTelemetryAge(d time.Duration) { s.maxTelemetryAge = d
 
 // ReadinessResult is the structured outcome of a readiness evaluation.
 type ReadinessResult struct {
-	Ready       bool     `json:"ready"`
-	ReadyDevices int     `json:"ready_devices"`
-	TotalDevices int     `json:"total_devices"`
-	Reasons     []string `json:"reasons"` // why NOT ready (empty if ready)
-	Details     []DeviceReadiness `json:"details"`
+	// ControlPlaneReady is host-level readiness: the sidecar has collected, is not stalled, and can
+	// provide trustworthy status for AT LEAST ONE managed device. This is NOT proof that every GPU
+	// can receive traffic — inspect per-device fields / details for that.
+	ControlPlaneReady bool `json:"control_plane_ready"`
+	AnyDeviceReady    bool `json:"any_device_ready"`
+	AllDevicesReady   bool `json:"all_devices_ready"`
+	ReadyDeviceCount  int  `json:"ready_device_count"`
+	TotalDeviceCount  int  `json:"total_device_count"`
+
+	// Ready mirrors ControlPlaneReady for backward compatibility with round-2 consumers.
+	Ready        bool     `json:"ready"`
+	ReadyDevices int      `json:"ready_devices"` // deprecated alias of ReadyDeviceCount
+	TotalDevices int      `json:"total_devices"` // deprecated alias of TotalDeviceCount
+	Reasons      []string `json:"reasons"`       // why control-plane NOT ready (empty if ready)
+	Details      []DeviceReadiness `json:"details"`
 }
 
 // DeviceReadiness is per-device readiness with reasons.
@@ -504,50 +576,25 @@ type DeviceReadiness struct {
 func (s *Supervisor) Readiness(now time.Time) ReadinessResult {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	res := ReadinessResult{TotalDevices: len(s.order)}
+	res := ReadinessResult{TotalDeviceCount: len(s.order), TotalDevices: len(s.order)}
 	collectorStalled := s.collectorStalled(now)
 	for _, devID := range s.order {
-		ds := s.devices[devID]
-		dr := DeviceReadiness{DeviceID: devID, LifecycleState: string(ds.lastStatus.LifecycleState)}
-		var reasons []string
-		if !ds.collected {
-			reasons = append(reasons, "NO_COLLECTION_YET")
-		}
-		if !ds.lastStatus.Health.GPUVisible {
-			reasons = append(reasons, "GPU_NOT_VISIBLE")
-		}
-		if !ds.lastStatus.Health.GPUAccessible {
-			reasons = append(reasons, "GPU_NOT_ACCESSIBLE")
-		}
-		if !ds.lastProbeOK {
-			reasons = append(reasons, "LAST_PROBE_FAILED")
-		}
-		ageMs := int64(-1)
-		if !ds.lastSampleWall.IsZero() {
-			ageMs = now.Sub(ds.lastSampleWall).Milliseconds()
-			if now.Sub(ds.lastSampleWall) > s.maxTelemetryAge {
-				reasons = append(reasons, "TELEMETRY_STALE")
-			}
-		} else {
-			reasons = append(reasons, "NO_SUCCESSFUL_SAMPLE")
-		}
-		dr.TelemetryAgeMs = ageMs
-		if ds.lastStatus.LifecycleState == core.StateOffline {
-			reasons = append(reasons, "LIFECYCLE_OFFLINE")
-		}
-		if collectorStalled {
-			reasons = append(reasons, "COLLECTOR_STALLED")
-		}
-		dr.Reasons = reasons
-		dr.Ready = len(reasons) == 0
+		dr := s.deviceReadinessLocked(devID, now, collectorStalled)
 		if dr.Ready {
-			res.ReadyDevices++
+			res.ReadyDeviceCount++
 		}
 		res.Details = append(res.Details, dr)
 	}
-	res.Ready = res.ReadyDevices > 0 && !collectorStalled
-	if !res.Ready {
-		seen := map[string]bool{}
+	res.ReadyDevices = res.ReadyDeviceCount // deprecated alias
+	res.AnyDeviceReady = res.ReadyDeviceCount > 0
+	res.AllDevicesReady = res.TotalDeviceCount > 0 && res.ReadyDeviceCount == res.TotalDeviceCount
+	res.ControlPlaneReady = res.AnyDeviceReady && !collectorStalled
+	res.Ready = res.ControlPlaneReady // backward-compat alias
+	if !res.ControlPlaneReady {
+		if collectorStalled {
+			res.Reasons = append(res.Reasons, "COLLECTOR_STALLED")
+		}
+		seen := map[string]bool{"COLLECTOR_STALLED": collectorStalled}
 		for _, d := range res.Details {
 			for _, r := range d.Reasons {
 				if !seen[r] {
@@ -561,6 +608,54 @@ func (s *Supervisor) Readiness(now time.Time) ReadinessResult {
 		}
 	}
 	return res
+}
+
+// DeviceReadiness returns readiness for a single managed device. found=false if devID is unmanaged.
+func (s *Supervisor) DeviceReadiness(devID string, now time.Time) (DeviceReadiness, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if _, ok := s.devices[devID]; !ok {
+		return DeviceReadiness{}, false
+	}
+	return s.deviceReadinessLocked(devID, now, s.collectorStalled(now)), true
+}
+
+// deviceReadinessLocked computes one device's readiness. Caller must hold s.mu.
+func (s *Supervisor) deviceReadinessLocked(devID string, now time.Time, collectorStalled bool) DeviceReadiness {
+	ds := s.devices[devID]
+	dr := DeviceReadiness{DeviceID: devID, LifecycleState: string(ds.lastStatus.LifecycleState)}
+	var reasons []string
+	if !ds.collected {
+		reasons = append(reasons, "NO_COLLECTION_YET")
+	}
+	if !ds.lastStatus.Health.GPUVisible {
+		reasons = append(reasons, "GPU_NOT_VISIBLE")
+	}
+	if !ds.lastStatus.Health.GPUAccessible {
+		reasons = append(reasons, "GPU_NOT_ACCESSIBLE")
+	}
+	if !ds.lastProbeOK {
+		reasons = append(reasons, "LAST_PROBE_FAILED")
+	}
+	ageMs := int64(-1)
+	if !ds.lastSampleWall.IsZero() {
+		ageMs = now.Sub(ds.lastSampleWall).Milliseconds()
+		if now.Sub(ds.lastSampleWall) > s.maxTelemetryAge {
+			reasons = append(reasons, "TELEMETRY_STALE")
+		}
+	} else {
+		reasons = append(reasons, "NO_SUCCESSFUL_SAMPLE")
+	}
+	dr.TelemetryAgeMs = ageMs
+	if ds.lastStatus.LifecycleState == core.StateOffline {
+		reasons = append(reasons, "LIFECYCLE_OFFLINE")
+	}
+	if collectorStalled {
+		reasons = append(reasons, "COLLECTOR_STALLED")
+	}
+	dr.Reasons = reasons
+	dr.Ready = len(reasons) == 0
+	return dr
 }
 
 // collectorStalled reports whether the poll loop has missed updates (internal collector health).

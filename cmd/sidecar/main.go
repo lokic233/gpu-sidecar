@@ -24,7 +24,7 @@ func main() {
 	cfg := config.Default()
 	var devicesCSV, vendor string
 	var maxTelAge time.Duration
-	flag.StringVar(&cfg.ListenAddr, "listen", cfg.ListenAddr, "listen address (default binds localhost+mesh; see api_security_notes.md)")
+	flag.StringVar(&cfg.ListenAddr, "listen", cfg.ListenAddr, "listen address (default 127.0.0.1:9095 loopback-only; override for trusted mesh — see artifacts/api_security_notes.md)")
 	flag.DurationVar(&cfg.PollInterval, "poll", cfg.PollInterval, "poll interval")
 	flag.DurationVar(&cfg.ProbeTimeout, "probe-timeout", cfg.ProbeTimeout, "per-command timeout")
 	flag.StringVar(&devicesCSV, "devices", "", "comma-separated device ids to monitor (default all)")
@@ -91,6 +91,11 @@ func main() {
 
 	srv := &http.Server{Addr: cfg.ListenAddr, Handler: api.New(sup, Version).Handler(),
 		ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second}
+	if !config.IsLoopback(cfg.ListenAddr) {
+		log.Printf("WARNING: binding %s is NON-loopback. The API has an UNauthenticated mutation "+
+			"endpoint (/v1/drain) with no TLS/authz. Only expose on a trusted mesh interface. "+
+			"See artifacts/api_security_notes.md", cfg.ListenAddr)
+	}
 	go func() {
 		log.Printf("HTTP listening on %s", cfg.ListenAddr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
