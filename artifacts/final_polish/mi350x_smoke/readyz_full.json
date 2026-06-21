@@ -1,0 +1,55 @@
+{
+  "control_plane_ready": true,
+  "any_device_ready": true,
+  "all_devices_ready": true,
+  "ready_device_count": 6,
+  "total_device_count": 6,
+  "ready": true,
+  "ready_devices": 6,
+  "total_devices": 6,
+  "reasons": null,
+  "details": [
+    {
+      "device_id": "6",
+      "ready": true,
+      "lifecycle_state": "READY",
+      "telemetry_age_ms": 4375,
+      "reasons": null
+    },
+    {
+      "device_id": "7",
+      "ready": true,
+      "lifecycle_state": "READY",
+      "telemetry_age_ms": 2990,
+      "reasons": null
+    },
+    {
+      "device_id": "2",
+      "ready": true,
+      "lifecycle_state": "READY",
+      "telemetry_age_ms": 1414,
+      "reasons": null
+    },
+    {
+      "device_id": "3",
+      "ready": true,
+      "lifecycle_state": "READY",
+      "telemetry_age_ms": 8623,
+      "reasons": null
+    },
+    {
+      "device_id": "4",
+      "ready": true,
+      "lifecycle_state": "READY",
+      "telemetry_age_ms": 7199,
+      "reasons": null
+    },
+    {
+      "device_id": "5",
+      "ready": true,
+      "lifecycle_state": "READY",
+      "telemetry_age_ms": 5816,
+      "reasons": null
+    }
+  ]
+}

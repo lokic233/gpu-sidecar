@@ -1,0 +1,5 @@
+  control_plane_ready: True
+  any_device_ready: True
+  all_devices_ready: True
+  ready_device_count: 6
+  total_device_count: 6

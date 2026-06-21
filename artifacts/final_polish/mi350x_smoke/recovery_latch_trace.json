@@ -1,0 +1,198 @@
+[
+  {
+    "t": 1.5,
+    "phase": "fault",
+    "state": "READY",
+    "latched": false,
+    "streak": 0
+  },
+  {
+    "t": 3.0,
+    "phase": "fault",
+    "state": "READY",
+    "latched": false,
+    "streak": 0
+  },
+  {
+    "t": 4.5,
+    "phase": "fault",
+    "state": "OFFLINE",
+    "latched": true,
+    "streak": 0
+  },
+  {
+    "t": 6.0,
+    "phase": "recover",
+    "state": "OFFLINE",
+    "latched": true,
+    "streak": 0,
+    "reasons": [
+      "GPU_NOT_VISIBLE",
+      "DEVICE_DISAPPEARED"
+    ]
+  },
+  {
+    "t": 7.5,
+    "phase": "recover",
+    "state": "OFFLINE",
+    "latched": true,
+    "streak": 0,
+    "reasons": [
+      "GPU_NOT_VISIBLE",
+      "DEVICE_DISAPPEARED"
+    ]
+  },
+  {
+    "t": 9.0,
+    "phase": "recover",
+    "state": "OFFLINE",
+    "latched": true,
+    "streak": 0,
+    "reasons": [
+      "GPU_NOT_VISIBLE",
+      "DEVICE_DISAPPEARED"
+    ]
+  },
+  {
+    "t": 10.5,
+    "phase": "recover",
+    "state": "OFFLINE",
+    "latched": true,
+    "streak": 0,
+    "reasons": [
+      "GPU_NOT_VISIBLE",
+      "DEVICE_DISAPPEARED"
+    ]
+  },
+  {
+    "t": 12.0,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 1,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 13.5,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 1,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 15.0,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 1,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 16.5,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 1,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 18.0,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 1,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 19.5,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 1,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 21.0,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 22.5,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 24.0,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 25.5,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 27.0,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 28.5,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 30.0,
+    "phase": "recover",
+    "state": "READY",
+    "latched": false,
+    "streak": 3,
+    "reasons": [
+      "RECOVERY_STREAK_MET",
+      "HEALTHY"
+    ]
+  }
+]
