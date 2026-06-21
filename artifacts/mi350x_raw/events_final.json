@@ -1,0 +1,102 @@
+{
+  "count": 13,
+  "events": [
+    {
+      "timestamp": "2026-06-21T06:34:24.175629744-07:00",
+      "device_id": "2",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:34:25.569443425-07:00",
+      "device_id": "3",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:34:26.898561657-07:00",
+      "device_id": "4",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:34:28.279784768-07:00",
+      "device_id": "5",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:34:29.81129975-07:00",
+      "device_id": "6",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:34:31.177425192-07:00",
+      "device_id": "7",
+      "kind": "STATE_TRANSITION",
+      "from": "UNKNOWN",
+      "to": "READY",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:35:01.897157434-07:00",
+      "device_id": "5",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:35:01.897157434-07:00",
+      "device_id": "5",
+      "kind": "STATE_TRANSITION",
+      "from": "READY",
+      "to": "OFFLINE",
+      "detail": "gpu not visible"
+    },
+    {
+      "timestamp": "2026-06-21T06:35:01.897157434-07:00",
+      "device_id": "5",
+      "kind": "DISCONNECT",
+      "detail": "probe/access failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:35:09.229789147-07:00",
+      "device_id": "5",
+      "kind": "PROBE_FAILURE",
+      "detail": "fault-injected:probe-failure"
+    },
+    {
+      "timestamp": "2026-06-21T06:35:16.397535908-07:00",
+      "device_id": "5",
+      "kind": "REJOIN",
+      "to": "RECOVERING",
+      "detail": "probe recovered"
+    },
+    {
+      "timestamp": "2026-06-21T06:35:16.397535908-07:00",
+      "device_id": "5",
+      "kind": "STATE_TRANSITION",
+      "from": "OFFLINE",
+      "to": "RECOVERING",
+      "detail": "healthy"
+    },
+    {
+      "timestamp": "2026-06-21T06:35:24.796271755-07:00",
+      "device_id": "5",
+      "kind": "STATE_TRANSITION",
+      "from": "RECOVERING",
+      "to": "READY",
+      "detail": "healthy"
+    }
+  ]
+}
