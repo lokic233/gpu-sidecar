@@ -4,8 +4,8 @@
   "vendor": "nvidia",
   "sidecar_version": "0.1.0",
   "boot_id": "6033736e-8996-40fa-a500-ca438a2eee40",
-  "timestamp": "2026-06-21T08:25:58.614194094-07:00",
-  "uptime_seconds": 96.219631626,
+  "timestamp": "2026-06-21T08:40:26.105826616-07:00",
+  "uptime_seconds": 963.711264269,
   "devices": [
     {
       "identity": {
@@ -22,7 +22,7 @@
         "sidecar_version": "0.1.0"
       },
       "health": {
-        "timestamp": "2026-06-21T08:25:56.432912739-07:00",
+        "timestamp": "2026-06-21T08:40:24.925857649-07:00",
         "heartbeat_ok": true,
         "gpu_visible": true,
         "gpu_accessible": true,
@@ -47,7 +47,7 @@
           "supported": true
         },
         "power_watts": {
-          "value": 67.96,
+          "value": 68.1,
           "supported": true
         },
         "power_limit_watts": {
@@ -67,7 +67,7 @@
           "supported": true
         },
         "effective_free_mem_ratio": 0.9947073188176273,
-        "probe_latency_ms": 121.644,
+        "probe_latency_ms": 194.457,
         "probe_failure": {
           "class": "",
           "reason": "",
@@ -105,14 +105,14 @@
         ],
         "consecutive_soft_failures": 0,
         "offline_failure_threshold": 3,
-        "healthy_streak": 46,
+        "healthy_streak": 479,
         "recovery_streak_required": 3,
         "hard_offline": false,
         "recovery_latched": false,
         "recovery_healthy_streak": 0
       },
       "reliability": {
-        "last_successful_probe": "2026-06-21T08:25:56.432859138-07:00",
+        "last_successful_probe": "2026-06-21T08:40:24.925802546-07:00",
         "last_failed_probe": null,
         "consecutive_probe_failures": 0,
         "sidecar_start_count": 1,
@@ -123,34 +123,34 @@
         "last_recovery_duration_ms": 0,
         "recent_availability_ratio": 1,
         "recent_failure_rate": 0,
-        "probe_latency_p50_ms": 121.5575,
-        "probe_latency_p95_ms": 186.3,
+        "probe_latency_p50_ms": 123.11850000000001,
+        "probe_latency_p95_ms": 226.03944999999985,
         "throughput_variance": {
           "value": 0,
           "supported": false
         }
       },
       "stability": {
-        "score": 0.993844725133087,
+        "score": 0.9906852844692591,
         "components": {
           "availability": 0.3,
           "disconnect": 0.15,
           "errors": 0.1,
           "failures": 0.2,
-          "instantaneous": 0.9940821330554585,
-          "latency": 0.09408213305545844,
+          "instantaneous": 0.9907116630635436,
+          "latency": 0.0907116630635436,
           "recovery": 0.1,
-          "smoothed": 0.993844725133087,
+          "smoothed": 0.9906852844692591,
           "throughput": 0.05
         },
-        "updated_at": "2026-06-21T08:25:56.432859138-07:00"
+        "updated_at": "2026-06-21T08:40:24.925802546-07:00"
       },
       "capacity": {
-        "host_capacity_hint": 0.9885846218581748,
+        "host_capacity_hint": 0.985441903106495,
         "capacity_semantics": "heuristic_host_derived",
         "components": {
           "free_memory_ratio": 0.9947073188176273,
-          "stability_score": 0.993844725133087,
+          "stability_score": 0.9906852844692591,
           "utilization_headroom": 1
         },
         "runtime_serving_capacity_supported": false
@@ -171,7 +171,7 @@
         "sidecar_version": "0.1.0"
       },
       "health": {
-        "timestamp": "2026-06-21T08:25:56.850027736-07:00",
+        "timestamp": "2026-06-21T08:40:25.49276475-07:00",
         "heartbeat_ok": true,
         "gpu_visible": true,
         "gpu_accessible": true,
@@ -192,11 +192,11 @@
           "supported": true
         },
         "temperature_c": {
-          "value": 39,
+          "value": 40,
           "supported": true
         },
         "power_watts": {
-          "value": 70.61,
+          "value": 70.96,
           "supported": true
         },
         "power_limit_watts": {
@@ -216,7 +216,7 @@
           "supported": true
         },
         "effective_free_mem_ratio": 0.9947073188176273,
-        "probe_latency_ms": 123.558,
+        "probe_latency_ms": 122.48,
         "probe_failure": {
           "class": "",
           "reason": "",
@@ -254,52 +254,52 @@
         ],
         "consecutive_soft_failures": 0,
         "offline_failure_threshold": 3,
-        "healthy_streak": 46,
+        "healthy_streak": 479,
         "recovery_streak_required": 3,
         "hard_offline": false,
         "recovery_latched": false,
         "recovery_healthy_streak": 0
       },
       "reliability": {
-        "last_successful_probe": "2026-06-21T08:25:56.849984872-07:00",
+        "last_successful_probe": "2026-06-21T08:40:25.492721344-07:00",
         "last_failed_probe": null,
         "consecutive_probe_failures": 0,
         "sidecar_start_count": 1,
-        "worker_starts_observed": 0,
-        "worker_stops_observed": 0,
+        "worker_starts_observed": 1,
+        "worker_stops_observed": 1,
         "disconnect_count": 0,
         "rejoin_count": 0,
         "last_recovery_duration_ms": 0,
         "recent_availability_ratio": 1,
         "recent_failure_rate": 0,
-        "probe_latency_p50_ms": 121.8665,
-        "probe_latency_p95_ms": 175.45725,
+        "probe_latency_p50_ms": 121.3685,
+        "probe_latency_p95_ms": 251.80329999999998,
         "throughput_variance": {
           "value": 0,
           "supported": false
         }
       },
       "stability": {
-        "score": 0.9935873469508028,
+        "score": 0.9880688140417063,
         "components": {
           "availability": 0.3,
           "disconnect": 0.15,
           "errors": 0.1,
           "failures": 0.2,
-          "instantaneous": 0.9951138928435806,
-          "latency": 0.09511389284358067,
+          "instantaneous": 0.9880588822012668,
+          "latency": 0.08805888220126677,
           "recovery": 0.1,
-          "smoothed": 0.9935873469508028,
+          "smoothed": 0.9880688140417063,
           "throughput": 0.05
         },
-        "updated_at": "2026-06-21T08:25:56.849984872-07:00"
+        "updated_at": "2026-06-21T08:40:25.492721344-07:00"
       },
       "capacity": {
-        "host_capacity_hint": 0.9883286058965526,
+        "host_capacity_hint": 0.9828392808227385,
         "capacity_semantics": "heuristic_host_derived",
         "components": {
           "free_memory_ratio": 0.9947073188176273,
-          "stability_score": 0.9935873469508028,
+          "stability_score": 0.9880688140417063,
           "utilization_headroom": 1
         },
         "runtime_serving_capacity_supported": false
@@ -320,7 +320,7 @@
         "sidecar_version": "0.1.0"
       },
       "health": {
-        "timestamp": "2026-06-21T08:25:57.267661779-07:00",
+        "timestamp": "2026-06-21T08:40:23.880950168-07:00",
         "heartbeat_ok": true,
         "gpu_visible": true,
         "gpu_accessible": true,
@@ -341,11 +341,11 @@
           "supported": true
         },
         "temperature_c": {
-          "value": 34,
+          "value": 32,
           "supported": true
         },
         "power_watts": {
-          "value": 68.34,
+          "value": 68.33,
           "supported": true
         },
         "power_limit_watts": {
@@ -365,7 +365,7 @@
           "supported": true
         },
         "effective_free_mem_ratio": 0.9947073188176273,
-        "probe_latency_ms": 124.188,
+        "probe_latency_ms": 122.264,
         "probe_failure": {
           "class": "",
           "reason": "",
@@ -403,52 +403,52 @@
         ],
         "consecutive_soft_failures": 0,
         "offline_failure_threshold": 3,
-        "healthy_streak": 46,
+        "healthy_streak": 147,
         "recovery_streak_required": 3,
-        "hard_offline": false,
+        "hard_offline": true,
         "recovery_latched": false,
-        "recovery_healthy_streak": 0
+        "recovery_healthy_streak": 4
       },
       "reliability": {
-        "last_successful_probe": "2026-06-21T08:25:57.266907789-07:00",
-        "last_failed_probe": null,
+        "last_successful_probe": "2026-06-21T08:40:23.879466195-07:00",
+        "last_failed_probe": "2026-06-21T08:35:29.32172752-07:00",
         "consecutive_probe_failures": 0,
         "sidecar_start_count": 1,
         "worker_starts_observed": 1,
         "worker_stops_observed": 1,
-        "disconnect_count": 0,
-        "rejoin_count": 0,
-        "last_recovery_duration_ms": 0,
+        "disconnect_count": 1,
+        "rejoin_count": 1,
+        "last_recovery_duration_ms": 1945,
         "recent_availability_ratio": 1,
         "recent_failure_rate": 0,
-        "probe_latency_p50_ms": 121.4405,
-        "probe_latency_p95_ms": 225.15625,
+        "probe_latency_p50_ms": 121.57,
+        "probe_latency_p95_ms": 277.30345,
         "throughput_variance": {
           "value": 0,
           "supported": false
         }
       },
       "stability": {
-        "score": 0.9893665487187311,
+        "score": 0.9794926308440071,
         "components": {
           "availability": 0.3,
           "disconnect": 0.15,
           "errors": 0.1,
           "failures": 0.2,
-          "instantaneous": 0.9905106021284314,
-          "latency": 0.09051060212843144,
-          "recovery": 0.1,
-          "smoothed": 0.9893665487187311,
+          "instantaneous": 0.9794888237122742,
+          "latency": 0.08576645828192263,
+          "recovery": 0.09372236543035153,
+          "smoothed": 0.9794926308440071,
           "throughput": 0.05
         },
-        "updated_at": "2026-06-21T08:25:57.266907789-07:00"
+        "updated_at": "2026-06-21T08:40:23.879466195-07:00"
       },
       "capacity": {
-        "host_capacity_hint": 0.9841301470038585,
+        "host_capacity_hint": 0.9743084886284663,
         "capacity_semantics": "heuristic_host_derived",
         "components": {
           "free_memory_ratio": 0.9947073188176273,
-          "stability_score": 0.9893665487187311,
+          "stability_score": 0.9794926308440071,
           "utilization_headroom": 1
         },
         "runtime_serving_capacity_supported": false
@@ -469,7 +469,7 @@
         "sidecar_version": "0.1.0"
       },
       "health": {
-        "timestamp": "2026-06-21T08:25:57.688565031-07:00",
+        "timestamp": "2026-06-21T08:40:24.288255415-07:00",
         "heartbeat_ok": true,
         "gpu_visible": true,
         "gpu_accessible": true,
@@ -494,7 +494,7 @@
           "supported": true
         },
         "power_watts": {
-          "value": 67.96,
+          "value": 67.9,
           "supported": true
         },
         "power_limit_watts": {
@@ -514,7 +514,7 @@
           "supported": true
         },
         "effective_free_mem_ratio": 0.9947073188176273,
-        "probe_latency_ms": 122.165,
+        "probe_latency_ms": 183.732,
         "probe_failure": {
           "class": "",
           "reason": "",
@@ -552,14 +552,14 @@
         ],
         "consecutive_soft_failures": 0,
         "offline_failure_threshold": 3,
-        "healthy_streak": 46,
+        "healthy_streak": 478,
         "recovery_streak_required": 3,
         "hard_offline": false,
         "recovery_latched": false,
         "recovery_healthy_streak": 0
       },
       "reliability": {
-        "last_successful_probe": "2026-06-21T08:25:57.687959236-07:00",
+        "last_successful_probe": "2026-06-21T08:40:24.288216776-07:00",
         "last_failed_probe": null,
         "consecutive_probe_failures": 0,
         "sidecar_start_count": 1,
@@ -570,34 +570,34 @@
         "last_recovery_duration_ms": 0,
         "recent_availability_ratio": 1,
         "recent_failure_rate": 0,
-        "probe_latency_p50_ms": 121.3495,
-        "probe_latency_p95_ms": 177.65125,
+        "probe_latency_p50_ms": 122.6595,
+        "probe_latency_p95_ms": 179.36579999999998,
         "throughput_variance": {
           "value": 0,
           "supported": false
         }
       },
       "stability": {
-        "score": 0.9927038337748604,
+        "score": 0.9942372052599446,
         "components": {
           "availability": 0.3,
           "disconnect": 0.15,
           "errors": 0.1,
           "failures": 0.2,
-          "instantaneous": 0.9948448489692995,
-          "latency": 0.09484484896929943,
+          "instantaneous": 0.9948632596741386,
+          "latency": 0.09486325967413857,
           "recovery": 0.1,
-          "smoothed": 0.9927038337748604,
+          "smoothed": 0.9942372052599446,
           "throughput": 0.05
         },
-        "updated_at": "2026-06-21T08:25:57.687959236-07:00"
+        "updated_at": "2026-06-21T08:40:24.288216776-07:00"
       },
       "capacity": {
-        "host_capacity_hint": 0.9874497688741709,
+        "host_capacity_hint": 0.9889750247128505,
         "capacity_semantics": "heuristic_host_derived",
         "components": {
           "free_memory_ratio": 0.9947073188176273,
-          "stability_score": 0.9927038337748604,
+          "stability_score": 0.9942372052599446,
           "utilization_headroom": 1
         },
         "runtime_serving_capacity_supported": false

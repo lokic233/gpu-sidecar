@@ -1,0 +1,2 @@
+2026/06/21 08:24:26 WARNING: binding [::]:19095 is NON-loopback. The API has an UNauthenticated mutation endpoint (/v1/drain) with no TLS/authz. Only expose on a trusted mesh interface. See artifacts/api_security_notes.md
+2026/06/21 08:24:26 HTTP listening on [::]:19095

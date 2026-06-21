@@ -1,0 +1,81 @@
+[
+  {
+    "t": 1.2,
+    "phase": "fault",
+    "state": "OFFLINE",
+    "latched": true,
+    "streak": 0
+  },
+  {
+    "t": 2.4,
+    "phase": "recover",
+    "state": "OFFLINE",
+    "latched": true,
+    "streak": 0,
+    "reasons": [
+      "GPU_NOT_VISIBLE",
+      "DEVICE_DISAPPEARED"
+    ]
+  },
+  {
+    "t": 3.6,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 1,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 4.8,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 6.0,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 2,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 7.2,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 3,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 8.4,
+    "phase": "recover",
+    "state": "RECOVERING",
+    "latched": true,
+    "streak": 3,
+    "reasons": [
+      "RECOVERY_HOLD"
+    ]
+  },
+  {
+    "t": 9.6,
+    "phase": "recover",
+    "state": "READY",
+    "latched": false,
+    "streak": 4,
+    "reasons": [
+      "RECOVERY_STREAK_MET",
+      "HEALTHY"
+    ]
+  }
+]

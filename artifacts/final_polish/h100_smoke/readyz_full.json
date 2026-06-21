@@ -13,28 +13,28 @@
       "device_id": "3",
       "ready": true,
       "lifecycle_state": "READY",
-      "telemetry_age_ms": 2187,
+      "telemetry_age_ms": 1172,
       "reasons": null
     },
     {
       "device_id": "4",
       "ready": true,
       "lifecycle_state": "READY",
-      "telemetry_age_ms": 1770,
+      "telemetry_age_ms": 605,
       "reasons": null
     },
     {
       "device_id": "6",
       "ready": true,
       "lifecycle_state": "READY",
-      "telemetry_age_ms": 1353,
+      "telemetry_age_ms": 2219,
       "reasons": null
     },
     {
       "device_id": "7",
       "ready": true,
       "lifecycle_state": "READY",
-      "telemetry_age_ms": 932,
+      "telemetry_age_ms": 1810,
       "reasons": null
     }
   ]
