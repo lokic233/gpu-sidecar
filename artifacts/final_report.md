@@ -85,7 +85,7 @@ AMD post-exit memory lag; absolute probe latency (NVIDIA ~122ms vs AMD ~224ms).
 | Worker start (detect) | 1.76s median | 5.78s median | proc/mem delta |
 | BUSY transition | 4.02s median | ~13.6s (1 sample) | util≥80% + 2-confirm hysteresis |
 | Worker stop (graceful) | 1.76s median | 4.52s median | proc/mem return to baseline |
-| SIGKILL crash | 2.14s | (AMD crash captured, mem-based) | proc/mem drop |
+| SIGKILL crash | 2.14s (proc-based) | 3.57s (memory-based) | NVIDIA proc-count; AMD mem-delta (proc-count unreliable) |
 | Fault → OFFLINE | 1.51s | 5.01s | ≥3 consecutive probe failures |
 | Recovery → RECOVERING | 1.51s | 6.52s | first healthy probe after OFFLINE |
 | RECOVERING → READY | 7.53s | 15.04s | 5s healthy hold + hysteresis |
