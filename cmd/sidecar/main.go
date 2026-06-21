@@ -46,6 +46,7 @@ func main() {
 		adapter, desc = adapters.NewGeneric(), "generic (forced)"
 	default:
 		adapter, desc = adapters.Detect()
+		adapter = adapters.WrapFaultInject(adapter)
 	}
 	log.Printf("sidecar %s starting on %s | adapter=%s | boot=%s", Version, host, desc, bootID)
 
