@@ -1,0 +1,515 @@
+{
+  "device": "4",
+  "workload": "./bin/workload_cuda",
+  "launch_delay_procs_s": 2.011,
+  "launch_delay_mem_s": 2.011,
+  "launch_delay_busy_s": 4.026,
+  "stop_delay_s": 1.76,
+  "poll_ms": 250,
+  "samples": [
+    {
+      "t": 0.008,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 0.259,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 0.51,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 0.762,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 1.013,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 1.264,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 1.515,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 1.767,
+      "state": "READY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9879,
+      "effcap": 0.9827
+    },
+    {
+      "t": 2.018,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 2.271,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 2.523,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 2.775,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 3.026,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 3.278,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 3.531,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 3.782,
+      "state": "READY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 4.034,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 4.285,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 4.536,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 4.788,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 5.039,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 5.29,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 5.541,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 5.793,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 6.044,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 6.296,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 6.548,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 6.799,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 7.05,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 7.303,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 7.556,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 7.807,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 8.06,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 8.312,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 8.563,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 8.814,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 9.066,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 9.317,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 9.569,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 9.82,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 10.071,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 10.324,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 10.575,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 10.827,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 11.078,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 11.331,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 11.582,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 11.833,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 12.085,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.9879,
+      "effcap": 0.0154
+    },
+    {
+      "t": 12.338,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.988,
+      "effcap": 0.0154
+    },
+    {
+      "t": 12.59,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.988,
+      "effcap": 0.0154
+    },
+    {
+      "t": 12.842,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.988,
+      "effcap": 0.0154
+    },
+    {
+      "t": 13.093,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.988,
+      "effcap": 0.0154
+    },
+    {
+      "t": 13.345,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.988,
+      "effcap": 0.0154
+    },
+    {
+      "t": 13.596,
+      "state": "BUSY",
+      "util": 98,
+      "mem_used_gb": 22.03,
+      "procs": 1,
+      "stability": 0.988,
+      "effcap": 0.0154
+    },
+    {
+      "t": 13.848,
+      "state": "BUSY",
+      "util": 0,
+      "mem_used_gb": 0.0,
+      "procs": 0,
+      "stability": 0.9881,
+      "effcap": 0.9829
+    }
+  ]
+}

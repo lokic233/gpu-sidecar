@@ -1,0 +1,24 @@
+{
+  "pid": 305769,
+  "rss_mb": 47.46,
+  "cpu_pct_of_one_core": 5.523,
+  "ncpu": 384,
+  "samples": 80,
+  "api_status_ms": {
+    "p50": 0.301,
+    "p95": 0.457
+  },
+  "api_metrics_ms": {
+    "p50": 0.254,
+    "p95": 0.31
+  },
+  "api_healthz_ms": {
+    "p50": 0.201,
+    "p95": 0.251
+  },
+  "probe_latency_ms": {
+    "p50": 122.601,
+    "p95": 123.497,
+    "n_dev": 4
+  }
+}
