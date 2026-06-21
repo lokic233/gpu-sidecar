@@ -405,19 +405,17 @@ func (s *Supervisor) SetDraining(devID string, d bool, source string) (found boo
 	if ds == nil {
 		return false, false
 	}
-	prevDraining := ds.machine.Draining()
-	if prevDraining == d {
+	prevState, changed := ds.machine.SetDrainingChecked(d)
+	if !changed {
 		return true, false // idempotent no-op
 	}
-	prevState := ds.machine.State()
-	ds.machine.SetDraining(d)
 	ds.hist.AddEvent(core.Event{
 		Timestamp: time.Now(), DeviceID: devID, Kind: core.EventStateTransition,
 		From: prevState, To: prevState, // actual state recomputed next poll
 		Detail:      "operator drain change",
 		ReasonCodes: []string{core.ReasonOperatorDrain},
 		Evidence: map[string]any{
-			"draining_previous": prevDraining, "draining_new": d, "request_source": source,
+			"draining_previous": !d, "draining_new": d, "request_source": source,
 		},
 	})
 	return true, true

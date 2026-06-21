@@ -299,3 +299,25 @@ func TestSupervisor_StaleClockSkewSafe(t *testing.T) {
 		t.Fatalf("availability out of range under clock skew: %v", rel.RecentAvailability)
 	}
 }
+
+func TestSupervisor_ConcurrentDrainAndPoll(t *testing.T) {
+	mock := newMockAdapter("0")
+	sup, clk := newTestSup(t, mock, "0")
+	poll(sup, clk, 2, 2*time.Second)
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+	wg.Add(1)
+	go func() { defer wg.Done(); for { select { case <-stop: return; default: sup.PollOnce() } } }()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		on := true
+		for i := 0; i < 50; i++ {
+			sup.SetDraining("0", on, "racetest")
+			on = !on
+		}
+	}()
+	time.Sleep(20 * time.Millisecond)
+	close(stop)
+	wg.Wait()
+}

@@ -1,0 +1,25 @@
+{
+  "ready": false,
+  "ready_devices": 0,
+  "total_devices": 1,
+  "reasons": [
+    "GPU_NOT_VISIBLE",
+    "GPU_NOT_ACCESSIBLE",
+    "LAST_PROBE_FAILED",
+    "LIFECYCLE_OFFLINE"
+  ],
+  "details": [
+    {
+      "device_id": "7",
+      "ready": false,
+      "lifecycle_state": "OFFLINE",
+      "telemetry_age_ms": 6650,
+      "reasons": [
+        "GPU_NOT_VISIBLE",
+        "GPU_NOT_ACCESSIBLE",
+        "LAST_PROBE_FAILED",
+        "LIFECYCLE_OFFLINE"
+      ]
+    }
+  ]
+}

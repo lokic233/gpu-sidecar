@@ -1,6 +1,9 @@
 package core
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 // Reason codes explain WHY a lifecycle decision was made (exposed in LifecycleInfo.ReasonCodes).
 const (
@@ -46,6 +49,7 @@ func DefaultLifecycleConfig() LifecycleConfig {
 
 // LifecycleMachine tracks one device's state with hysteresis and monotonic timing.
 type LifecycleMachine struct {
+	mu           sync.Mutex
 	cfg          LifecycleConfig
 	state        LifecycleState
 	pending      LifecycleState
@@ -67,13 +71,28 @@ func NewLifecycleMachine(cfg LifecycleConfig) *LifecycleMachine {
 	return &LifecycleMachine{cfg: cfg, state: StateUnknown, pending: StateUnknown}
 }
 
-func (m *LifecycleMachine) State() LifecycleState { return m.state }
-func (m *LifecycleMachine) SetDraining(d bool)    { m.draining = d }
-func (m *LifecycleMachine) Draining() bool        { return m.draining }
-func (m *LifecycleMachine) HasBeenOffline() bool  { return m.hasBeenOffline }
+func (m *LifecycleMachine) State() LifecycleState { m.mu.Lock(); defer m.mu.Unlock(); return m.state }
+func (m *LifecycleMachine) SetDraining(d bool)    { m.mu.Lock(); defer m.mu.Unlock(); m.draining = d }
+func (m *LifecycleMachine) Draining() bool        { m.mu.Lock(); defer m.mu.Unlock(); return m.draining }
+func (m *LifecycleMachine) HasBeenOffline() bool  { m.mu.Lock(); defer m.mu.Unlock(); return m.hasBeenOffline }
+
+// SetDrainingChecked atomically sets draining and reports the previous state and whether it changed.
+// This avoids a check-then-set race when called concurrently with the poll loop.
+func (m *LifecycleMachine) SetDrainingChecked(d bool) (prevState LifecycleState, changed bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	prevState = m.state
+	if m.draining == d {
+		return prevState, false
+	}
+	m.draining = d
+	return prevState, true
+}
 
 // Info returns an auditable snapshot of the machine's reasoning.
 func (m *LifecycleMachine) Info() LifecycleInfo {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	rc := append([]string(nil), m.reasonCodes...)
 	if len(rc) == 0 {
 		rc = []string{ReasonHealthy}
@@ -141,6 +160,8 @@ func (m *LifecycleMachine) classifyHealthy(o LifecycleObservation) (LifecycleSta
 //   - SOFT failures => DEGRADED first; only after OfflineFailures consecutive soft failures => OFFLINE.
 //   - Recovery from OFFLINE => RECOVERING, held until RecoveringHoldSec AND RecoveryStreak healthy probes.
 func (m *LifecycleMachine) Step(o LifecycleObservation) (LifecycleState, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	prev := m.state
 
 	// Determine failure condition. The adapter's explicit classification takes precedence:
