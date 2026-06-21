@@ -29,24 +29,29 @@ func WrapFaultInject(inner Adapter) Adapter {
 	return &FaultInject{inner: inner, file: f}
 }
 
-func (f *FaultInject) refresh(deviceID string) (fail bool, delay time.Duration) {
+func (f *FaultInject) refresh(deviceID string) (mode string, delay time.Duration) {
 	b, err := os.ReadFile(f.file)
 	if err != nil {
-		return false, 0
+		return "", 0
 	}
 	s := string(b)
-	// very small parser: lines "fail <dev>" / "delay <dev> <ms>"
+	// parser: "fail <dev>" (soft), "failsoft <dev>", "failhard <dev>", "delay <dev> <ms>"
 	for _, line := range splitLines(s) {
 		ff := fields(line)
-		if len(ff) >= 2 && ff[0] == "fail" && ff[1] == deviceID {
-			return true, 0
-		}
-		if len(ff) >= 3 && ff[0] == "delay" && ff[1] == deviceID {
-			ms := atoiSafe(ff[2])
-			return false, time.Duration(ms) * time.Millisecond
+		if len(ff) >= 2 && ff[1] == deviceID {
+			switch ff[0] {
+			case "fail", "failsoft":
+				return "soft", 0
+			case "failhard":
+				return "hard", 0
+			case "delay":
+				if len(ff) >= 3 {
+					return "", time.Duration(atoiSafe(ff[2])) * time.Millisecond
+				}
+			}
 		}
 	}
-	return false, 0
+	return "", 0
 }
 
 func (f *FaultInject) Vendor() core.Vendor        { return f.inner.Vendor() }
@@ -63,22 +68,30 @@ func (f *FaultInject) Discover(t time.Duration) ([]core.Identity, error) {
 }
 
 func (f *FaultInject) Sample(deviceID string, t time.Duration) (core.Health, string) {
-	fail, delay := f.refresh(deviceID)
+	mode, delay := f.refresh(deviceID)
 	if delay > 0 {
 		time.Sleep(delay)
 	}
-	if fail {
+	if mode == "soft" {
 		h := core.Health{Timestamp: time.Now(), GPUVisible: false}
-		h.UnsupportedFields = append(h.UnsupportedFields, "fault-injected:probe-failure")
+		h.UnsupportedFields = append(h.UnsupportedFields, "fault-injected:soft-probe-failure")
+		h.ProbeFailure = core.ProbeFailure{Class: core.FailureSoft, Reason: core.ReasonProbeFailure, Detail: "fault-injected soft failure (experiment)"}
 		markUnsupportedAll(&h)
-		return h, "FAULT_INJECTED probe failure (experiment)"
+		return h, "FAULT_INJECTED soft probe failure (experiment)"
+	}
+	if mode == "hard" {
+		h := core.Health{Timestamp: time.Now(), GPUVisible: false}
+		h.UnsupportedFields = append(h.UnsupportedFields, "fault-injected:hard-device-gone")
+		h.ProbeFailure = core.ProbeFailure{Class: core.FailureHard, Reason: core.ReasonDeviceDisappeared, Detail: "fault-injected hard failure (experiment)"}
+		markUnsupportedAll(&h)
+		return h, "FAULT_INJECTED hard device-gone (experiment)"
 	}
 	return f.inner.Sample(deviceID, t)
 }
 
 func (f *FaultInject) AccessProbe(deviceID string, t time.Duration) bool {
-	fail, _ := f.refresh(deviceID)
-	if fail {
+	mode, _ := f.refresh(deviceID)
+	if mode == "soft" || mode == "hard" {
 		return false
 	}
 	return f.inner.AccessProbe(deviceID, t)

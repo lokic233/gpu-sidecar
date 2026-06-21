@@ -25,14 +25,19 @@ type BackendView struct {
 	DeviceID          string              `json:"device_id"`
 	LifecycleState    core.LifecycleState `json:"lifecycle_state"`
 	StabilityScore    float64             `json:"stability_score"`
-	EffectiveCapacity float64             `json:"effective_capacity"`
+	HostCapacityHint  float64             `json:"host_capacity_hint"`
+	CapacitySemantics string              `json:"capacity_semantics"`
 	LastHeartbeatAgeMs int64              `json:"last_heartbeat_age_ms"`
 	RecentFailureCount int                `json:"recent_failure_count"`
 	Recovering        bool                `json:"recovering"`
 	Reachable         bool                `json:"reachable"`
+	Stale             bool                `json:"stale"` // heartbeat age exceeded staleness threshold
 	MemFreeBytes      uint64              `json:"mem_free_bytes"`
 	Error             string              `json:"error,omitempty"`
 }
+
+// staleThresholdMs: a backend whose newest heartbeat is older than this is flagged stale.
+const staleThresholdMs = 10000
 
 type target struct {
 	name string
@@ -137,7 +142,12 @@ func pollOne(client *http.Client, t target) []BackendView {
 	if err != nil {
 		return []BackendView{{BackendID: t.name, Hostname: t.name, Reachable: false, Error: err.Error()}}
 	}
-	now := time.Now()
+	return viewsFromStatus(t.name, hs, time.Now())
+}
+
+// viewsFromStatus converts a HostStatus into BackendViews, flagging stale heartbeats.
+// Separated for deterministic testing with an injectable 'now'.
+func viewsFromStatus(name string, hs *core.HostStatus, now time.Time) []BackendView {
 	var views []BackendView
 	for _, d := range hs.Devices {
 		age := now.Sub(d.Health.Timestamp).Milliseconds()
@@ -155,23 +165,25 @@ func pollOne(client *http.Client, t target) []BackendView {
 			DeviceID:           d.Identity.DeviceID,
 			LifecycleState:     d.LifecycleState,
 			StabilityScore:     d.Stability.Score,
-			EffectiveCapacity:  d.EffectiveCapacity,
+			HostCapacityHint:   d.Capacity.HostCapacityHint,
+			CapacitySemantics:  d.Capacity.CapacitySemantics,
 			LastHeartbeatAgeMs: age,
 			RecentFailureCount: d.Reliability.ConsecutiveFailures,
 			Recovering:         d.LifecycleState == core.StateRecovering,
 			Reachable:          true,
+			Stale:              age > staleThresholdMs,
 			MemFreeBytes:       memFree,
 		})
 	}
 	if len(views) == 0 {
-		return []BackendView{{BackendID: t.name, Hostname: hs.Hostname, Reachable: true, Error: "no devices"}}
+		return []BackendView{{BackendID: name, Hostname: hs.Hostname, Reachable: true, Error: "no devices"}}
 	}
 	return views
 }
 
 func printTable(views []BackendView) {
 	fmt.Printf("%-28s %-8s %-4s %-11s %7s %7s %9s %6s %6s\n",
-		"BACKEND", "VENDOR", "DEV", "STATE", "STABIL", "EFFCAP", "HB_AGE_MS", "FAILS", "FREEGB")
+		"BACKEND", "VENDOR", "DEV", "STATE", "STABIL", "CAPHINT", "HB_AGE_MS", "FAILS", "FREEGB")
 	fmt.Println(strings.Repeat("-", 100))
 	for _, v := range views {
 		if !v.Reachable {
@@ -180,7 +192,7 @@ func printTable(views []BackendView) {
 		}
 		fmt.Printf("%-28s %-8s %-4s %-11s %7.3f %7.3f %9d %6d %6.1f\n",
 			truncate(v.BackendID, 28), v.Vendor, v.DeviceID, v.LifecycleState,
-			v.StabilityScore, v.EffectiveCapacity, v.LastHeartbeatAgeMs, v.RecentFailureCount,
+			v.StabilityScore, v.HostCapacityHint, v.LastHeartbeatAgeMs, v.RecentFailureCount,
 			float64(v.MemFreeBytes)/1e9)
 	}
 }

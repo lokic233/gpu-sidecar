@@ -48,13 +48,15 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "alive", "version": s.version, "time": time.Now()})
 }
 
-// /readyz: confirms the sidecar can currently inspect its assigned GPU backend.
+// /readyz: confirms the sidecar can currently inspect its assigned GPU backend with TRUSTWORTHY,
+// FRESH telemetry. Returns 503 with structured reasons if not ready. See readiness_semantics.md.
 func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
-	if s.sup.Ready() {
-		writeJSON(w, http.StatusOK, map[string]any{"status": "ready", "devices": s.sup.DeviceCount()})
-		return
+	res := s.sup.Readiness(time.Now())
+	code := http.StatusOK
+	if !res.Ready {
+		code = http.StatusServiceUnavailable
 	}
-	writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "reason": "no inspectable GPU"})
+	writeJSON(w, code, res)
 }
 
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
@@ -81,15 +83,53 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"count": len(evs), "events": evs})
 }
 
-// /v1/drain?device=N&on=true|false : operator drain toggle.
+// /v1/drain : operator drain toggle. STATE-CHANGING — POST/PUT only, GET is rejected.
+// Body or query: device=N, on=true|false. Idempotent. Records a lifecycle event.
 func (s *Server) drain(w http.ResponseWriter, r *http.Request) {
-	dev := r.URL.Query().Get("device")
-	on, _ := strconv.ParseBool(r.URL.Query().Get("on"))
-	if ok := s.sup.SetDraining(dev, on); !ok {
+	if r.Method != http.MethodPost && r.Method != http.MethodPut {
+		w.Header().Set("Allow", "POST, PUT")
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{
+			"error": "drain is state-changing; use POST or PUT, not " + r.Method})
+		return
+	}
+	// Accept JSON body {"device":"N","on":true} or form/query params.
+	var dev, onStr string
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "application/json") {
+		var body struct {
+			Device *string `json:"device"`
+			On     *bool   `json:"on"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid JSON body: " + err.Error()})
+			return
+		}
+		if body.Device == nil || body.On == nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "fields 'device' and 'on' are required"})
+			return
+		}
+		dev = *body.Device
+		onStr = strconv.FormatBool(*body.On)
+	} else {
+		dev = r.FormValue("device")
+		onStr = r.FormValue("on")
+	}
+	if dev == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "field 'device' is required"})
+		return
+	}
+	on, err := strconv.ParseBool(onStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "field 'on' must be a boolean (got " + strconv.Quote(onStr) + ")"})
+		return
+	}
+	source := r.RemoteAddr
+	found, changed := s.sup.SetDraining(dev, on, source)
+	if !found {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "unknown device", "device": dev})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"device": dev, "draining": on})
+	writeJSON(w, http.StatusOK, map[string]any{"device": dev, "draining": on, "changed": changed})
 }
 
 // /metrics: Prometheus text exposition.
@@ -109,7 +149,7 @@ func (s *Server) metrics(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(&b, "gpu_sidecar_uptime_seconds{host=%q} %f\n", hs.Hostname, hs.UptimeSeconds)
 
 	help("gpu_stability_score", "gauge", "normalized stability score [0,1]")
-	help("gpu_effective_capacity", "gauge", "effective serving capacity [0,1]")
+	help("gpu_host_capacity_hint", "gauge", "heuristic host-derived capacity hint [0,1] — NOT serving capacity")
 	help("gpu_lifecycle_state", "gauge", "1 for the active lifecycle state label")
 	help("gpu_utilization_pct", "gauge", "GPU utilization percent")
 	help("gpu_mem_used_bytes", "gauge", "GPU memory used bytes")
@@ -129,7 +169,7 @@ func (s *Server) metrics(w http.ResponseWriter, r *http.Request) {
 	for _, d := range hs.Devices {
 		l := lbl(d)
 		fmt.Fprintf(&b, "gpu_stability_score%s %f\n", l, d.Stability.Score)
-		fmt.Fprintf(&b, "gpu_effective_capacity%s %f\n", l, d.EffectiveCapacity)
+		fmt.Fprintf(&b, "gpu_host_capacity_hint%s %f\n", l, d.Capacity.HostCapacityHint)
 		for _, st := range states {
 			v := 0
 			if d.LifecycleState == st {

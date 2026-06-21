@@ -109,6 +109,7 @@ func (a *AMD) Sample(deviceID string, timeout time.Duration) (core.Health, strin
 	if !a.hasROCm {
 		h.GPUVisible = false
 		h.UnsupportedFields = append(h.UnsupportedFields, "all:rocm-smi-missing")
+		h.ProbeFailure = core.ProbeFailure{Class: core.FailureHard, Reason: core.ReasonAdapterInitFailed, Detail: "rocm-smi not on PATH"}
 		markUnsupportedAll(&h)
 		return h, ""
 	}
@@ -120,6 +121,7 @@ func (a *AMD) Sample(deviceID string, timeout time.Duration) (core.Health, strin
 	if r.Err != nil || r.ExitCode != 0 {
 		h.GPUVisible = false
 		h.UnsupportedFields = append(h.UnsupportedFields, fmt.Sprintf("sample:exit=%d timedout=%v", r.ExitCode, r.TimedOut))
+		h.ProbeFailure = classifyAMDFailure(r.TimedOut, string(r.Stderr))
 		markUnsupportedAll(&h)
 		return h, raw + "\nSTDERR:" + string(r.Stderr)
 	}
@@ -127,6 +129,8 @@ func (a *AMD) Sample(deviceID string, timeout time.Duration) (core.Health, strin
 	if err := json.Unmarshal(r.Stdout, &m); err != nil {
 		h.GPUVisible = false
 		h.UnsupportedFields = append(h.UnsupportedFields, "sample:json-parse-fail")
+		// malformed JSON is a transient/parse SOFT failure, not proof the device is gone.
+		h.ProbeFailure = core.ProbeFailure{Class: core.FailureSoft, Reason: core.ReasonProbeFailure, Detail: "rocm-smi json parse failed"}
 		markUnsupportedAll(&h)
 		return h, raw
 	}
@@ -134,10 +138,13 @@ func (a *AMD) Sample(deviceID string, timeout time.Duration) (core.Health, strin
 	if !ok {
 		h.GPUVisible = false
 		h.UnsupportedFields = append(h.UnsupportedFields, "sample:card-not-in-output")
+		// card absent from rocm-smi output => device likely gone => HARD evidence.
+		h.ProbeFailure = core.ProbeFailure{Class: core.FailureHard, Reason: core.ReasonDeviceDisappeared, Detail: "card not present in rocm-smi output"}
 		markUnsupportedAll(&h)
 		return h, raw
 	}
 	h.GPUVisible = true
+
 
 	h.TemperatureC = amdF(card, "Temperature (Sensor junction) (C)")
 	h.UtilizationGPU = amdF(card, "GPU use (%)")
@@ -305,4 +312,19 @@ func firstNonEmpty(ss ...string) string {
 		}
 	}
 	return ""
+}
+
+// classifyAMDFailure decides hard vs soft from a failed rocm-smi sample.
+func classifyAMDFailure(timedOut bool, stderr string) core.ProbeFailure {
+	if timedOut {
+		return core.ProbeFailure{Class: core.FailureSoft, Reason: core.ReasonProbeTimeout, Detail: "rocm-smi timed out"}
+	}
+	low := strings.ToLower(stderr)
+	hardMarkers := []string{"no gpus", "device not found", "invalid device", "no such device", "not detected"}
+	for _, m := range hardMarkers {
+		if strings.Contains(low, m) {
+			return core.ProbeFailure{Class: core.FailureHard, Reason: core.ReasonDeviceDisappeared, Detail: strings.TrimSpace(stderr)}
+		}
+	}
+	return core.ProbeFailure{Class: core.FailureSoft, Reason: core.ReasonProbeFailure, Detail: strings.TrimSpace(stderr)}
 }

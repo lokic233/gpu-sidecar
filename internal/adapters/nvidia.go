@@ -100,6 +100,7 @@ func (n *NVIDIA) Sample(deviceID string, timeout time.Duration) (core.Health, st
 	if !n.hasSMI {
 		h.GPUVisible = false
 		h.UnsupportedFields = append(h.UnsupportedFields, "all:nvidia-smi-missing")
+		h.ProbeFailure = core.ProbeFailure{Class: core.FailureHard, Reason: core.ReasonAdapterInitFailed, Detail: "nvidia-smi not on PATH"}
 		markUnsupportedAll(&h)
 		return h, ""
 	}
@@ -109,18 +110,23 @@ func (n *NVIDIA) Sample(deviceID string, timeout time.Duration) (core.Health, st
 	raw := string(r.Stdout)
 	if r.Err != nil || r.ExitCode != 0 {
 		h.GPUVisible = false
+		stderr := string(r.Stderr)
 		h.UnsupportedFields = append(h.UnsupportedFields, fmt.Sprintf("sample:exit=%d timedout=%v", r.ExitCode, r.TimedOut))
+		h.ProbeFailure = classifyNVFailure(r.TimedOut, stderr)
 		markUnsupportedAll(&h)
-		return h, raw + "\nSTDERR:" + string(r.Stderr)
+		return h, raw + "\nSTDERR:" + stderr
 	}
 	f := splitCSV(firstLine(raw))
 	if len(f) < 15 {
 		h.GPUVisible = false
 		h.UnsupportedFields = append(h.UnsupportedFields, "sample:short-output")
+		// Malformed/short output is a SOFT (transient/parse) failure, not proof the device is gone.
+		h.ProbeFailure = core.ProbeFailure{Class: core.FailureSoft, Reason: core.ReasonProbeFailure, Detail: "short/malformed nvidia-smi output"}
 		markUnsupportedAll(&h)
 		return h, raw
 	}
 	h.GPUVisible = true
+
 	// 0 idx,1 uuid,2 name,3 drv,4 mem.used,5 mem.free,6 mem.total,7 util,8 temp,
 	// 9 power.draw,10 power.limit,11 sm_clk,12 mem_clk,13 ecc.uncorr,14 ecc.corr
 	h.MemUsedBytes = mibToBytes(parseF(f[4]))
@@ -256,3 +262,22 @@ func mibToBytes(v float64, ok bool) core.Field[uint64] {
 }
 
 var _ = os.Getenv // reserved for future env-based overrides
+
+// classifyNVFailure decides hard vs soft from a failed nvidia-smi sample.
+// HARD: device definitively absent ("No devices were found", "Invalid device id",
+// "Unable to determine the device handle"). SOFT: timeout or generic transient error.
+func classifyNVFailure(timedOut bool, stderr string) core.ProbeFailure {
+	if timedOut {
+		return core.ProbeFailure{Class: core.FailureSoft, Reason: core.ReasonProbeTimeout, Detail: "nvidia-smi timed out"}
+	}
+	low := strings.ToLower(stderr)
+	hardMarkers := []string{"no devices were found", "invalid device", "unable to determine the device handle",
+		"no devices found", "device not found", "gpu is lost", "unknown device"}
+	for _, m := range hardMarkers {
+		if strings.Contains(low, m) {
+			return core.ProbeFailure{Class: core.FailureHard, Reason: core.ReasonDeviceDisappeared, Detail: strings.TrimSpace(stderr)}
+		}
+	}
+	// Generic non-zero exit without a definitive "device gone" marker => transient/soft.
+	return core.ProbeFailure{Class: core.FailureSoft, Reason: core.ReasonProbeFailure, Detail: strings.TrimSpace(stderr)}
+}

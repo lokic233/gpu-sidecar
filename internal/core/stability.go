@@ -72,7 +72,10 @@ type StabilityInputs struct {
 	LatencyP95Ms        float64
 	LatencyP50Ms        float64
 	ThroughputVariance  float64 // coefficient of variation, when enabled; <0 = disabled
-	ProcessCrashes      int
+	// AbnormalDisappearances counts worker processes that vanished in the recent window WITHOUT a
+	// confirmed cause. This is an OBSERVED signal (count/memory delta), NOT a confirmed crash count.
+	// Renamed from the former misleading "ProcessCrashes" — the host sidecar cannot confirm crashes.
+	AbnormalDisappearances int
 }
 
 // instantaneous computes the unsmoothed [0,1] score and its components.
@@ -109,9 +112,10 @@ func (s *StabilityCalc) instantaneous(in StabilityInputs) (float64, map[string]f
 		thrScore = clamp01(1.0 - in.ThroughputVariance*2.0) // CoV 0.5 => 0
 	}
 
-	// process crashes add an extra penalty folded into failures component
-	if in.ProcessCrashes > 0 {
-		failScore *= math.Exp(-0.5 * float64(in.ProcessCrashes))
+	// abnormal (unexplained) worker disappearances add a mild penalty folded into the failures
+	// component. This is NOT a crash count — cause is unknown (see worker_event_semantics.md).
+	if in.AbnormalDisappearances > 0 {
+		failScore *= math.Exp(-0.5 * float64(in.AbnormalDisappearances))
 	}
 
 	comps := map[string]float64{

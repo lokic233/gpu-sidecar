@@ -23,12 +23,14 @@ const Version = "0.1.0"
 func main() {
 	cfg := config.Default()
 	var devicesCSV, vendor string
-	flag.StringVar(&cfg.ListenAddr, "listen", cfg.ListenAddr, "listen address")
+	var maxTelAge time.Duration
+	flag.StringVar(&cfg.ListenAddr, "listen", cfg.ListenAddr, "listen address (default binds localhost+mesh; see api_security_notes.md)")
 	flag.DurationVar(&cfg.PollInterval, "poll", cfg.PollInterval, "poll interval")
 	flag.DurationVar(&cfg.ProbeTimeout, "probe-timeout", cfg.ProbeTimeout, "per-command timeout")
 	flag.StringVar(&devicesCSV, "devices", "", "comma-separated device ids to monitor (default all)")
 	flag.StringVar(&vendor, "vendor", "auto", "vendor: auto|nvidia|amd|generic")
 	flag.BoolVar(&cfg.AccessProbeEach, "access-probe", cfg.AccessProbeEach, "active access probe each cycle")
+	flag.DurationVar(&maxTelAge, "max-telemetry-age", 15*time.Second, "readiness: max age of a successful sample before /readyz fails")
 	flag.Parse()
 
 	host, _ := os.Hostname()
@@ -46,8 +48,9 @@ func main() {
 		adapter, desc = adapters.NewGeneric(), "generic (forced)"
 	default:
 		adapter, desc = adapters.Detect()
-		adapter = adapters.WrapFaultInject(adapter)
 	}
+	// Fault injection is gated by GPU_SIDECAR_FAULT_FILE; safe no-op otherwise. Applies to all vendors.
+	adapter = adapters.WrapFaultInject(adapter)
 	log.Printf("sidecar %s starting on %s | adapter=%s | boot=%s", Version, host, desc, bootID)
 
 	var devFilter []string
@@ -56,8 +59,11 @@ func main() {
 	}
 
 	sup := engine.NewSupervisor(adapter, instanceID, host, bootID, Version,
+
 		cfg.Lifecycle, cfg.Stability, cfg.WindowSeconds,
 		cfg.ProbeRingCap, cfg.PointRingCap, cfg.EventRingCap, cfg.ProbeTimeout, cfg.AccessProbeEach)
+	sup.SetMaxTelemetryAge(maxTelAge)
+	sup.SetPollInterval(cfg.PollInterval)
 
 	if err := sup.Init(devFilter); err != nil {
 		log.Printf("WARN: discovery failed (%v) — serving degraded contract", err)
