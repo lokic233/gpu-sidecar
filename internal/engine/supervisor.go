@@ -483,6 +483,17 @@ func (s *Supervisor) SetDraining(devID string, d bool, source string) (found boo
 	return true, true
 }
 
+// Draining reports whether the given device is currently operator-drained.
+func (s *Supervisor) Draining(devID string) bool {
+	s.mu.RLock()
+	ds := s.devices[devID]
+	s.mu.RUnlock()
+	if ds == nil {
+		return false
+	}
+	return ds.machine.Draining()
+}
+
 // SetThroughputVariance records a controlled-probe CoV for a device.
 func (s *Supervisor) SetThroughputVariance(devID string, cov float64) {
 	s.mu.RLock()

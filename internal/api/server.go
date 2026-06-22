@@ -18,6 +18,11 @@ type Server struct {
 	sup     *engine.Supervisor
 	version string
 	mux     *http.ServeMux
+
+	// optional data plane (Phase 3+): nil for telemetry-only sidecars (backward compatible).
+	chatHandler http.HandlerFunc
+	runtimeSnap func() any
+	queueSnap   func() any
 }
 
 func New(sup *engine.Supervisor, version string) *Server {
@@ -28,12 +33,54 @@ func New(sup *engine.Supervisor, version string) *Server {
 	s.mux.HandleFunc("/v1/history", s.history)
 	s.mux.HandleFunc("/v1/events", s.events)
 	s.mux.HandleFunc("/v1/drain", s.drain)
+	s.mux.HandleFunc("/v1/runtime", s.runtime)
+	s.mux.HandleFunc("/v1/queue", s.queue)
+	s.mux.HandleFunc("/v1/chat/completions", s.chat)
 	s.mux.HandleFunc("/metrics", s.metrics)
 	s.mux.HandleFunc("/", s.index)
 	return s
 }
 
+// AttachDataPlane wires the local data-plane proxy + runtime/queue snapshot providers.
+// Safe to skip for telemetry-only sidecars.
+func (s *Server) AttachDataPlane(chat http.HandlerFunc, runtimeSnap, queueSnap func() any) {
+	s.chatHandler = chat
+	s.runtimeSnap = runtimeSnap
+	s.queueSnap = queueSnap
+}
+
 func (s *Server) Handler() http.Handler { return s.mux }
+
+func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
+	if s.chatHandler == nil {
+		writeJSON(w, http.StatusNotImplemented, map[string]any{
+			"error": "data plane not enabled on this sidecar (telemetry-only)"})
+		return
+	}
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "use POST"})
+		return
+	}
+	s.chatHandler(w, r)
+}
+
+func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
+	if s.runtimeSnap == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"runtime_enabled": false})
+		return
+	}
+	writeJSON(w, http.StatusOK, s.runtimeSnap())
+}
+
+func (s *Server) queue(w http.ResponseWriter, r *http.Request) {
+	if s.queueSnap == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"queue_enabled": false})
+		return
+	}
+	writeJSON(w, http.StatusOK, s.queueSnap())
+}
+
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
