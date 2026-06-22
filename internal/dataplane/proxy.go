@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"bufio"
+	"errors"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -256,11 +257,22 @@ func (p *Proxy) relayStream(w http.ResponseWriter, r *http.Request, tk *Ticket, 
 			break
 		}
 		if err != nil {
-			// upstream error mid-stream
+			// Distinguish client/router cancellation (ctx canceled) from a true upstream failure.
+			cancelled := tk.Context().Err() != nil || errors.Is(err, context.Canceled)
 			if firstDownstream.IsZero() {
+				if cancelled {
+					p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "pre_first_event"})
+					p.queue.Done(tk, StateCancelled, "cancelled_pre_first_event")
+					return
+				}
 				// no bytes sent yet -> treat as upstream failure (router may retry)
 				p.emit("VLLM_REQUEST_FAILED", reqID, routeID, map[string]any{"err": err.Error(), "phase": "pre_first_event"})
 				p.queue.Done(tk, StateUpstreamFail, "upstream_err_pre_first_event")
+				return
+			}
+			if cancelled {
+				p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "mid_stream", "events": eventCount, "bytes": byteCount})
+				p.queue.Done(tk, StateCancelled, "client_cancelled_mid_stream")
 				return
 			}
 			p.emit("PARTIAL_STREAM_FAILED", reqID, routeID, map[string]any{

@@ -200,11 +200,20 @@ func (g *Gateway) forward(w http.ResponseWriter, r *http.Request, bs *BackendSta
 			break
 		}
 		if rerr != nil {
+			clientGone := r.Context().Err() != nil
 			if firstByte.IsZero() {
+				if clientGone {
+					g.emit("CLIENT_CANCELLED", reqID, routeID, bs.Backend.ID, map[string]any{"phase": "pre_first_byte"})
+					return "", true
+				}
 				// pre-first-byte stream error -> retryable
 				return "stream_err_pre_first_byte:" + rerr.Error(), false
 			}
-			// post-first-byte failure: terminal, NO reroute
+			if clientGone {
+				g.emit("CLIENT_CANCELLED", reqID, routeID, bs.Backend.ID, map[string]any{"phase": "mid_stream", "events": events})
+				return "", true
+			}
+			// post-first-byte upstream failure: terminal, NO reroute
 			g.emit("PARTIAL_STREAM_FAILED", reqID, routeID, bs.Backend.ID, map[string]any{
 				"err": rerr.Error(), "events": events, "bytes": bytesn})
 			return "", true
