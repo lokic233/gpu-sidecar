@@ -1,5 +1,14 @@
 # GPU Host Sidecar (cross-vendor: NVIDIA H100 + AMD MI350X)
 
+> **Round 4 — end-to-end vLLM flow.** Added a Global Router Gateway (`cmd/router`), a local data
+> plane in the sidecar (`-data-plane`: bounded admission queue + OpenAI proxy + transparent SSE relay
+> via `internal/dataplane`), a vLLM runtime adapter (`internal/runtime/vllm`), and an async
+> Response/Trajectory Collector (`cmd/trajcollector`). Validated end-to-end on real H100 (vLLM 0.23)
+> and real MI350X (gfx950): Client→Router→Sidecar queue→runtime→relay→Client, streaming + non-stream,
+> cross-vendor round-robin, queue-full/drain/retry/cancel/collector-outage, joined trajectories.
+> Proxy overhead ~0ms added TTFT. See `artifacts/e2e_vllm_flow/final_e2e_report.md`. 130 tests, race-clean.
+
+
 > **Round 3 — final correctness/semantics polish.** Recovery is now **latched** (no DEGRADED/BUSY
 > bypass of the hold+streak after OFFLINE); worker disappearance is **neutral by default** (only
 > confirmed-abnormal/OOM/rapid-restart evidence lowers stability); worker-event history is **bounded**

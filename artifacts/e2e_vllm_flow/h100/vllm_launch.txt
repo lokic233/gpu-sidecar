@@ -1,0 +1,9 @@
+# H100 vLLM (devgpu014, GPU3, CUDA 13.0, vLLM 0.23.0)
+CUBLAS=~/vllm-env/lib/python3.12/site-packages/nvidia/cu13/lib/libcublas.so.13
+CUBLASLT=~/vllm-env/lib/python3.12/site-packages/nvidia/cu13/lib/libcublasLt.so.13
+PATH="$HOME/vllm-env/bin:$PATH" LD_PRELOAD="$CUBLAS:$CUBLASLT" VLLM_ATTENTION_BACKEND=FLASH_ATTN \
+  HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES=3 ~/vllm-env/bin/python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-0.5B-Instruct --port 8000 --host 127.0.0.1 \
+  --max-model-len 4096 --gpu-memory-utilization 0.30 --enforce-eager --no-enable-log-requests
+# Notes: LD_PRELOAD bundled cublas fixes 'undefined symbol cublasGemmEx'; ninja required on PATH
+# for FlashInfer JIT (installed in venv); --enforce-eager avoids cudagraph capture cost for small model.

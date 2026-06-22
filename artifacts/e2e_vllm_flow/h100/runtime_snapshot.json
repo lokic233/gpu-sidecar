@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-06-22T04:45:40.173643637-07:00",
+  "healthy": true,
+  "scrape_ok": true,
+  "scrape_age_ms": 527.948,
+  "scrape_latency_ms": 5.919,
+  "requests_running": {
+    "value": 0,
+    "supported": true
+  },
+  "requests_waiting": {
+    "value": 0,
+    "supported": true
+  },
+  "kv_cache_utilization": {
+    "value": 0,
+    "supported": true
+  },
+  "active_sequences": {
+    "value": 0,
+    "supported": true
+  },
+  "prompt_tokens_per_s": {
+    "value": 12807,
+    "supported": true
+  },
+  "generation_tokens_per_s": {
+    "value": 6478,
+    "supported": true
+  },
+  "request_latency_p50_s": {
+    "value": 0.3,
+    "supported": true
+  },
+  "queue_latency_p50_s": {
+    "value": 0.3,
+    "supported": true
+  },
+  "ttft_p50_s": {
+    "value": 0.04,
+    "supported": true
+  },
+  "tpot_p50_s": {
+    "value": 0.01,
+    "supported": true
+  },
+  "preemptions_total": {
+    "value": 0,
+    "supported": true
+  },
+  "prefix_cache_hits_total": {
+    "value": 6544,
+    "supported": true
+  },
+  "prefix_cache_queries_total": {
+    "value": 12807,
+    "supported": true
+  },
+  "requests_success_total": {
+    "value": 397,
+    "supported": true
+  },
+  "requests_failed_total": {
+    "value": 0,
+    "supported": false
+  },
+  "model_name": "",
+  "runtime_version": "",
+  "raw_metric_sources": {
+    "active_sequences": "derived:vllm:num_requests_running",
+    "generation_tokens_per_s": "vllm:generation_tokens_total(counter)",
+    "kv_cache_utilization": "vllm:kv_cache_usage_perc",
+    "preemptions_total": "vllm:num_preemptions_total",
+    "prompt_tokens_per_s": "vllm:prompt_tokens_total(counter)",
+    "requests_running": "vllm:num_requests_running",
+    "requests_waiting": "vllm:num_requests_waiting",
+    "vllm:e2e_request_latency_seconds": "vllm:e2e_request_latency_seconds_bucket",
+    "vllm:inter_token_latency_seconds": "vllm:inter_token_latency_seconds_bucket",
+    "vllm:request_queue_time_seconds": "vllm:request_queue_time_seconds_bucket",
+    "vllm:time_to_first_token_seconds": "vllm:time_to_first_token_seconds_bucket"
+  },
+  "unsupported_fields": [
+    "requests_failed_total"
+  ]
+}

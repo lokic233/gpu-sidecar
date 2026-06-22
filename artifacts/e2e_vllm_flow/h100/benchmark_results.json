@@ -1,0 +1,101 @@
+[
+  {
+    "label": "A_direct_vllm",
+    "n": 40,
+    "concurrency": 1,
+    "ttft_p50_ms": 27.57,
+    "ttft_p95_ms": 32.22,
+    "ttft_p99_ms": 38.77,
+    "e2e_p50_ms": 123.67,
+    "e2e_p95_ms": 332.56,
+    "throughput_rps": 6.9
+  },
+  {
+    "label": "B_sidecar",
+    "n": 40,
+    "concurrency": 1,
+    "ttft_p50_ms": 25.5,
+    "ttft_p95_ms": 28.28,
+    "ttft_p99_ms": 28.73,
+    "e2e_p50_ms": 112.06,
+    "e2e_p95_ms": 307.88,
+    "throughput_rps": 7.06
+  },
+  {
+    "label": "C_router_sidecar",
+    "n": 40,
+    "concurrency": 1,
+    "ttft_p50_ms": 25.68,
+    "ttft_p95_ms": 28.78,
+    "ttft_p99_ms": 31.38,
+    "e2e_p50_ms": 111.81,
+    "e2e_p95_ms": 260.9,
+    "throughput_rps": 8.08
+  },
+  {
+    "label": "A_direct_vllm",
+    "n": 40,
+    "concurrency": 8,
+    "ttft_p50_ms": 32.83,
+    "ttft_p95_ms": 48.67,
+    "ttft_p99_ms": 49.36,
+    "e2e_p50_ms": 120.45,
+    "e2e_p95_ms": 290.98,
+    "throughput_rps": 48.36
+  },
+  {
+    "label": "B_sidecar",
+    "n": 40,
+    "concurrency": 8,
+    "ttft_p50_ms": 29.89,
+    "ttft_p95_ms": 44.57,
+    "ttft_p99_ms": 45.25,
+    "e2e_p50_ms": 116.19,
+    "e2e_p95_ms": 260.52,
+    "throughput_rps": 53.72
+  },
+  {
+    "label": "C_router_sidecar",
+    "n": 40,
+    "concurrency": 8,
+    "ttft_p50_ms": 30.79,
+    "ttft_p95_ms": 39.04,
+    "ttft_p99_ms": 39.33,
+    "e2e_p50_ms": 118.87,
+    "e2e_p95_ms": 247.38,
+    "throughput_rps": 53.29
+  },
+  {
+    "label": "A_direct_vllm",
+    "n": 40,
+    "concurrency": 32,
+    "ttft_p50_ms": 57.28,
+    "ttft_p95_ms": 64.67,
+    "ttft_p99_ms": 65.77,
+    "e2e_p50_ms": 148.65,
+    "e2e_p95_ms": 156.89,
+    "throughput_rps": 98.05
+  },
+  {
+    "label": "B_sidecar",
+    "n": 40,
+    "concurrency": 32,
+    "ttft_p50_ms": 55.93,
+    "ttft_p95_ms": 158.94,
+    "ttft_p99_ms": 159.18,
+    "e2e_p50_ms": 158.23,
+    "e2e_p95_ms": 298.67,
+    "throughput_rps": 95.84
+  },
+  {
+    "label": "C_router_sidecar",
+    "n": 40,
+    "concurrency": 32,
+    "ttft_p50_ms": 57.22,
+    "ttft_p95_ms": 62.33,
+    "ttft_p99_ms": 63.19,
+    "e2e_p50_ms": 158.18,
+    "e2e_p95_ms": 313.35,
+    "throughput_rps": 98.67
+  }
+]

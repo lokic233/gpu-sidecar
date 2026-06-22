@@ -1,0 +1,8 @@
+# MI350X runtime (devgpu499, gfx950, ROCm 7.0, torch 2.10.0+rocm7.0)
+# NOTE: PyPI vLLM 0.23 wheel is CUDA-only (no _rocm_C) and cannot run on ROCm without a source build.
+# The cross-vendor data plane was validated against a minimal OpenAI-compatible server doing REAL
+# gfx950 inference (HF transformers), exposing vLLM-style /metrics:
+LD_PRELOAD=/usr/lib64/libzstd.so.1 HF_HUB_OFFLINE=1 HIP_VISIBLE_DEVICES=2 \
+  MODEL=Qwen/Qwen2.5-0.5B-Instruct PORT=8000 ~/vllm-env/bin/python ~/mini_oai_server.py
+# torch install: uv pip install --index-url https://download.pytorch.org/whl/rocm7.0 torch==2.10.0+rocm7.0
+# (rocm6.4 torch lacked gfx950 kernels: 'Unsupported HSA device gfx950'; rocm7.0 fixed it.)

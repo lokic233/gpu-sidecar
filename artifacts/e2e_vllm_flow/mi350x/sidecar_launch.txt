@@ -1,0 +1,6 @@
+# MI350X data-plane sidecar (devgpu499)
+GPU_SIDECAR_FAULT_FILE=/tmp/sidecar_fault ~/gpu-sidecar/bin/sidecar \
+  -listen "[::]:19095" -devices 2 -poll 2s \
+  -data-plane -vllm-url http://127.0.0.1:8000 -backend-id mi350x-gpu2 -dp-device 2 \
+  -max-queued 256 -max-inflight 32 -queue-timeout 30s \
+  -collector-url "http://[2401:db00:33c:2c1c:face:0:266:0]:29100/v1/events"

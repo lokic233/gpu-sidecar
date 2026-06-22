@@ -1,0 +1,25 @@
+# H100 sidecar (data-plane enabled). Launch flags mirror these values.
+listen: "[::]:19095"          # mesh-bound (router reaches it); loopback default otherwise
+devices: ["3"]
+poll_interval: 2s
+data_plane:
+  enabled: true
+  vllm_url: http://127.0.0.1:8000
+  backend_id: h100-gpu3
+  device_id: "3"
+queue:
+  max_queued_requests: 256
+  max_inflight_requests: 64
+  queue_timeout: 30s
+  admission_mode: fifo
+runtime:
+  type: vllm
+  base_url: http://127.0.0.1:8000
+  health_path: /health
+  metrics_path: /metrics
+  chat_completions_path: /v1/chat/completions
+  request_timeout: 10m
+  connect_timeout: 2s
+  metrics_timeout: 500ms
+trajectory:
+  collector_url: http://127.0.0.1:29100/v1/events   # collector on router host

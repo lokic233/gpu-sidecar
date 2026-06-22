@@ -1,0 +1,14 @@
+{
+  "sidecar": {
+    "pid": 111784,
+    "rss_mb": 44
+  },
+  "router": {
+    "pid": 1429603,
+    "rss_mb": 42
+  },
+  "collector": {
+    "pid": 3956156,
+    "rss_mb": 28
+  }
+}

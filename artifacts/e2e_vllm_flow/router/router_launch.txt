@@ -1,0 +1,5 @@
+# Router (on devgpu014/router host) spanning both vendors over the mesh
+~/gpu-sidecar/bin/router -listen 127.0.0.1:19093 \
+  -backends '[{"id":"h100-gpu3","vendor":"nvidia","sidecar_url":"http://127.0.0.1:19095","snapshot_url":"http://127.0.0.1:19095"},
+             {"id":"mi350x-gpu2","vendor":"amd","sidecar_url":"http://[2401:db00:272c:590b:face:0:133:0]:19095","snapshot_url":"http://[2401:db00:272c:590b:face:0:133:0]:19095"}]' \
+  -policy round_robin -collector-url http://127.0.0.1:29100/v1/events -snapshot-interval 500ms -max-retries 1

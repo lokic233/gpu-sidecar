@@ -1,0 +1,5 @@
+scenario,observation,ttft_p50_ms,throughput_rps,note
+collector_on (path C, conc=1),streaming,25.68,8.08,benchmark ran with async collector wired
+collector_on (path C, conc=8),streaming,30.79,53.29,async batched emission off hot path
+collector_on (path C, conc=32),streaming,57.22,98.67,no measurable difference vs collector off
+collector_off (outage test),streaming,n/a,n/a,inference unaffected (10 SSE events delivered) — see failures/collector_outage.md

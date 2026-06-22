@@ -1,0 +1,10 @@
+# Response/Trajectory Collector — runs on the router host for this experiment; URL-configurable.
+listen: "[::]:9100"             # bind mesh so remote sidecars can ship events (loopback for single-host)
+out: artifacts/e2e_vllm_flow/router/joined_trajectories/events.jsonl
+# emitter side (router + sidecars):
+emitter:
+  batch_size: 128
+  flush_interval: 500ms
+  queue_capacity: 10000
+  request_timeout: 500ms
+  local_fallback_path: ""       # optional bounded JSONL fallback

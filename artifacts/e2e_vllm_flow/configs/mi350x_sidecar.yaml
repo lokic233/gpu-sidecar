@@ -1,0 +1,20 @@
+# MI350X sidecar (data-plane enabled). gfx950 / ROCm 7.0.
+listen: "[::]:19095"
+devices: ["2"]
+poll_interval: 2s
+data_plane:
+  enabled: true
+  vllm_url: http://127.0.0.1:8000   # OpenAI-compatible runtime on the AMD GPU
+  backend_id: mi350x-gpu2
+  device_id: "2"
+queue:
+  max_queued_requests: 256
+  max_inflight_requests: 32
+  queue_timeout: 30s
+  admission_mode: fifo
+runtime:
+  type: vllm   # adapter is vLLM-metric-compatible; on MI350X the runtime is an OpenAI server (see vllm_runtime_contract.md)
+  base_url: http://127.0.0.1:8000
+  metrics_path: /metrics
+trajectory:
+  collector_url: http://[2401:db00:33c:2c1c:face:0:266:0]:29100/v1/events  # collector on H100/router host over mesh

@@ -1,0 +1,6 @@
+# H100 data-plane sidecar (devgpu014)
+GPU_SIDECAR_FAULT_FILE=/tmp/sidecar_fault ~/gpu-sidecar/bin/sidecar \
+  -listen "[::]:19095" -devices 3 -poll 2s \
+  -data-plane -vllm-url http://127.0.0.1:8000 -backend-id h100-gpu3 -dp-device 3 \
+  -max-queued 256 -max-inflight 64 -queue-timeout 30s \
+  -collector-url http://127.0.0.1:29100/v1/events

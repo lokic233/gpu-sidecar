@@ -1,0 +1,15 @@
+# Global Router Gateway
+listen: 127.0.0.1:9090
+policy: least_queued            # round_robin | least_queued | least_runtime_waiting | health_gated_least_pressure
+snapshot_interval: 500ms        # backend snapshot materialized OFF the hot path
+max_retries: 1                  # bounded pre-first-token cross-backend retry
+collector_url: http://127.0.0.1:9100/v1/events
+backends:
+  - id: h100-gpu3
+    vendor: nvidia
+    sidecar_url: http://127.0.0.1:19095
+    snapshot_url: http://127.0.0.1:19095
+  - id: mi350x-gpu2
+    vendor: amd
+    sidecar_url: "http://[2401:db00:272c:590b:face:0:133:0]:19095"
+    snapshot_url: "http://[2401:db00:272c:590b:face:0:133:0]:19095"

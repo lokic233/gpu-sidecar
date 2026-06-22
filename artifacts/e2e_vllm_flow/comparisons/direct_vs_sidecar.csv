@@ -1,0 +1,7 @@
+concurrency,path,ttft_p50_ms,ttft_p95_ms,ttft_p99_ms,e2e_p50_ms,throughput_rps
+1,A_direct_vllm,27.57,32.22,38.77,123.67,6.9
+1,B_sidecar,25.5,28.28,28.73,112.06,7.06
+8,A_direct_vllm,32.83,48.67,49.36,120.45,48.36
+8,B_sidecar,29.89,44.57,45.25,116.19,53.72
+32,A_direct_vllm,57.28,64.67,65.77,148.65,98.05
+32,B_sidecar,55.93,158.94,159.18,158.23,95.84

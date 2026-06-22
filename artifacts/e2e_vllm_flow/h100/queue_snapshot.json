@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "queued_requests": 0,
+  "inflight_requests": 0,
+  "max_queued_requests": 256,
+  "max_inflight_requests": 64,
+  "oldest_queued_age_ms": 0,
+  "arrival_rate_per_s": 0,
+  "dispatch_rate_per_s": 0,
+  "completion_rate_per_s": 0,
+  "arrivals_total": 240,
+  "dispatched_total": 240,
+  "completed_total": 240,
+  "rejected_total": 0,
+  "queue_timeout_total": 0,
+  "cancelled_total": 0,
+  "queue_wait_p50_ms": 0.008,
+  "queue_wait_p95_ms": 0.028099999999999965
+}

@@ -1,0 +1,3 @@
+# Trajectory collector (router host; mesh-bound so remote sidecars can ship events)
+~/gpu-sidecar/bin/trajcollector -listen "[::]:29100" \
+  -out artifacts/e2e_vllm_flow/router/joined_trajectories/events.jsonl

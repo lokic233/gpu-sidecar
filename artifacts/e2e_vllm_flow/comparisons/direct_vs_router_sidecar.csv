@@ -1,0 +1,7 @@
+concurrency,path,ttft_p50_ms,ttft_p95_ms,ttft_p99_ms,e2e_p50_ms,throughput_rps
+1,A_direct_vllm,27.57,32.22,38.77,123.67,6.9
+1,C_router_sidecar,25.68,28.78,31.38,111.81,8.08
+8,A_direct_vllm,32.83,48.67,49.36,120.45,48.36
+8,C_router_sidecar,30.79,39.04,39.33,118.87,53.29
+32,A_direct_vllm,57.28,64.67,65.77,148.65,98.05
+32,C_router_sidecar,57.22,62.33,63.19,158.18,98.67
