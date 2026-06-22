@@ -1,0 +1,72 @@
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+/opt/amdgpu/share/libdrm/amdgpu.ids: No such file or directory
+loading Qwen/Qwen2.5-0.5B-Instruct on cuda (AMD Radeon Graphics)
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/290 [00:00<?, ?it/s]Loading weights: 100%|██████████| 290/290 [00:00<00:00, 12096.59it/s]
+model loaded
+Traceback (most recent call last):----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 44058)
+Traceback (most recent call last):
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/usr/local/fbcode/platform010/lib/python3.12/http/server.py", line 442, in handle
+    self.handle_one_request()
+  File "/usr/local/fbcode/platform010/lib/python3.12/http/server.py", line 428, in handle_one_request
+    method()
+  File "/home/dengcchi/mini_oai_server.py", line 78, in do_POST
+    self._chunk(data)
+  File "/home/dengcchi/mini_oai_server.py", line 100, in _chunk
+    self.wfile.write(("%x\r\n" % len(data)).encode()); self.wfile.write(data); self.wfile.write(b"\r\n"); self.wfile.flush()
+                                                       ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 39182)
+Exception occurred during processing of request from ('127.0.0.1', 39168)
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/usr/local/fbcode/platform010/lib/python3.12/socketserver.py", line 766, in __init__
+    self.handle()
+  File "/usr/local/fbcode/platform010/lib/python3.12/http/server.py", line 442, in handle
+    self.handle_one_request()
+  File "/usr/local/fbcode/platform010/lib/python3.12/http/server.py", line 442, in handle
+    self.handle_one_request()
+  File "/usr/local/fbcode/platform010/lib/python3.12/http/server.py", line 408, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/fbcode/platform010/lib/python3.12/http/server.py", line 408, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/fbcode/platform010/lib/python3.12/socket.py", line 720, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/fbcode/platform010/lib/python3.12/socket.py", line 720, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [Errno 104] Connection reset by peer
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+----------------------------------------
