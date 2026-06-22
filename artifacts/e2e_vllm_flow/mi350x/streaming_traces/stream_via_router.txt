@@ -1,0 +1,22 @@
+1782127105.449210859 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "Sure! "}}]}
+1782127105.456742838 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "Here "}}]}
+1782127105.466775675 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "are "}}]}
+1782127105.477339995 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "three "}}]}
+1782127105.490244270 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "common "}}]}
+1782127105.499461365 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "and "}}]}
+1782127105.509729738 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "widely "}}]}
+1782127105.519961335 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "recognized "}}]}
+1782127105.529562821 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "colors:\n\n"}}]}
+1782127105.560487650 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "1. "}}]}
+1782127105.591402415 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "**Red** "}}]}
+1782127105.601384695 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "- "}}]}
+1782127105.611524244 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "Often "}}]}
+1782127105.620760307 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "associated "}}]}
+1782127105.630563016 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "with "}}]}
+1782127105.651302939 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "energy, "}}]}
+1782127105.671666373 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "passion, "}}]}
+1782127105.681645049 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "and "}}]}
+1782127105.691662482 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "excitement.\n"}}]}
+1782127105.722528102 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "2. "}}]}
+1782127105.725096723 data: {"id": "chatcmpl-1782127105383855533", "object": "chat.completion.chunk", "choices": [{"index": 0, "delta": {"content": "**"}}]}
+1782127105.727424780 data: [DONE]
