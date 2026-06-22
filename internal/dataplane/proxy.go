@@ -233,10 +233,11 @@ func (p *Proxy) relayStream(w http.ResponseWriter, r *http.Request, tk *Ticket, 
 			}
 			// write+flush immediately (no buffering of the full answer)
 			if _, werr := w.Write(line); werr != nil {
-				// downstream gone -> cancel upstream
+				// downstream (router/client) gone -> this is a CANCELLATION, not an upstream
+				// partial failure. Cancel upstream and account it as cancelled.
 				tk.cancel()
 				p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "downstream_write_fail"})
-				p.queue.Done(tk, StatePartialStream, "downstream_write_failed")
+				p.queue.Done(tk, StateCancelled, "downstream_gone")
 				return
 			}
 			flusher.Flush()
