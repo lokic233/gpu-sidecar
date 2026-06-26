@@ -78,12 +78,16 @@ func (idx *Index) WithClock(f func() time.Time) *Index {
 
 // --- event application -------------------------------------------------------------------------
 
-// checkSeqLocked validates a sequence number against the last seen one. Returns:
+// checkSeqLocked validates a BATCH sequence number against the last seen one. Returns:
 //
 //	accept=true   -> apply this event
-//	accept=false  -> drop (duplicate or strictly-old out-of-order event)
+//	accept=false  -> drop (an older batch we have already fully consumed)
 //
-// It also detects gaps (seq jumped forward by >1) and counts them. Caller holds the write lock.
+// IMPORTANT: vLLM's KV-event sequence is per-BATCH, not per-event. A single KVEventBatch (one seq)
+// carries MANY BlockStored/BlockRemoved events, so multiple events legitimately share one seq. We
+// therefore treat `seq == lastSeq` as a same-batch continuation (accept), detect gaps only when the
+// seq jumps forward by >1 batch, and count true duplicates separately at the entry level (a store
+// for a key+seq we already recorded). Caller holds the write lock.
 func (idx *Index) checkSeqLocked(seq int64) (accept bool) {
 	if !idx.haveSeq {
 		idx.haveSeq = true
@@ -95,15 +99,13 @@ func (idx *Index) checkSeqLocked(seq int64) (accept bool) {
 		idx.lastSeq = seq
 		return true
 	case seq == idx.lastSeq:
-		// exact duplicate of the most recent event
-		idx.duplicates++
-		return false
+		// same batch as the most recent one — additional events from that batch. Accept.
+		return true
 	case seq < idx.lastSeq:
-		// arrived out of order / replayed; older than current head. Count, but still apply because
-		// store/remove are idempotent on metadata and a late store is still useful locality info.
+		// an older batch arriving late / replayed. Apply anyway (idempotent metadata) but count.
 		idx.outOfOrder++
 		return true
-	default: // seq > lastSeq+1 : GAP. We missed events -> we can no longer trust completeness.
+	default: // seq > lastSeq+1 : we skipped at least one whole batch -> GAP.
 		idx.sequenceGaps++
 		idx.lastSeq = seq
 		// A gap means the index may be missing removes/stores. We do NOT wipe (the surviving entries
@@ -125,6 +127,12 @@ func (idx *Index) ApplyStore(seq int64, key, parent string, matchedTokens, block
 	t := idx.now()
 	idx.lastUpdate = t
 	if e, ok := idx.entries[key]; ok {
+		// A store for a key we already have AT THE SAME SEQ is a true duplicate (e.g. replayed batch
+		// or at-least-once redelivery). Count it and no-op — the entry is unchanged.
+		if e.Present && e.LastSeq == seq {
+			idx.duplicates++
+			return
+		}
 		e.Present = true
 		e.Parent = parent
 		if matchedTokens > 0 {
