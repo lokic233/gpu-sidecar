@@ -1,5 +1,10 @@
 # Implementation Report — Cache-Aware Admission Sidecar
 
+> ⚠️ **See `artifacts/cache_aware_sidecar_hardening/` for the Round-5.1 correctness-hardening pass**, which corrected the equal-capability experiment (independent replicas + HARD-STOP guard), the residency state machine, work-accounting lifecycle, atomic routing snapshot, and the service-profile/throughput split. Native per-request KV-block matching remains unsupported.
+
+---
+
+
 ## Summary
 
 Extended the GPU Host Sidecar from *(local load observer + bounded admission proxy)* into

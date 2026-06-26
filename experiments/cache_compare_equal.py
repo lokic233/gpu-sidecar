@@ -1,135 +1,183 @@
 #!/usr/bin/env python3
-"""Equal-capability policy comparison (Section 10, clean isolation).
+"""Equal-capability policy comparison — Round-5 HARDENED (P0 #2).
 
-Two backends of IDENTICAL speed (both H100 sidecars -> same fast vLLM). The ONLY asymmetry is cache
-locality, induced via the explicit-prefix experiment header. This isolates the routing-policy effect:
-  - round_robin / least_queued: ignore locality -> split hot-prefix traffic across both (miss reuse)
-  - cache_affinity_only: herd ALL hot traffic onto whichever backend warmed first (ignores load)
-  - cache_aware_estimated_finish: send hot traffic to the warm backend UNTIL it gets congested, then
-    balance -> best of both.
+REQUIRES two GENUINELY INDEPENDENT vLLM replicas (independent process / GPU / port / KV cache /
+scheduler). It REFUSES to run when both backend definitions resolve to the same vLLM runtime identity
+(process_start_time_seconds, surfaced as runtime_instance_id via the router /v1/backends). Two sidecars
+over one runtime is NOT a two-replica cache-routing experiment.
 
-We measure per-backend assignment for the HOT prefix group specifically, plus aggregate latency.
+The two backends must be supplied as independent sidecars (each fronting its own vLLM). See
+launch_two_replicas.sh (two H100 GPUs) + independent_replica_proof.md.
 """
 import json, os, subprocess, sys, time, urllib.request
 
-ROUTER_BIN="./bin/router"; ADDR="127.0.0.1:19094"; URL="http://"+ADDR
-COLLECTOR="http://127.0.0.1:29110/v1/events"
-BACKENDS=json.dumps([
-  {"id":"h100a","vendor":"nvidia","sidecar_url":"http://127.0.0.1:19097","snapshot_url":"http://127.0.0.1:19097"},
-  {"id":"h100b","vendor":"nvidia","sidecar_url":"http://127.0.0.1:19098","snapshot_url":"http://127.0.0.1:19098"},
-])
-POLICIES=["round_robin","least_queued","health_gated_least_pressure","cache_affinity_only","cache_aware_estimated_finish"]
-OUTDIR="artifacts/cache_aware_sidecar/e2e/comparison_equal"
-MODEL="Qwen/Qwen2.5-0.5B-Instruct"
+ROUTER_BIN = "./bin/router"
+ADDR = "127.0.0.1:19094"
+URL = "http://" + ADDR
+COLLECTOR = os.environ.get("COLLECTOR", "http://127.0.0.1:29110/v1/events")
+# Two INDEPENDENT sidecars (default ports; override via env). Each fronts its own vLLM replica.
+BACKENDS = os.environ.get("BACKENDS", json.dumps([
+    {"id": "replicaA", "vendor": "nvidia", "sidecar_url": "http://127.0.0.1:19101", "snapshot_url": "http://127.0.0.1:19101"},
+    {"id": "replicaB", "vendor": "nvidia", "sidecar_url": "http://127.0.0.1:19102", "snapshot_url": "http://127.0.0.1:19102"},
+]))
+POLICIES = ["round_robin", "least_queued", "health_gated_least_pressure", "cache_affinity_only", "cache_aware_estimated_finish"]
+OUTDIR = "artifacts/cache_aware_sidecar_hardening/results_equal"
+MODEL = os.environ.get("MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
+
 
 def kill_router():
-    subprocess.run(["pkill","-f",f"{ROUTER_BIN} -listen {ADDR}"],capture_output=True); time.sleep(1.5)
+    subprocess.run(["pkill", "-f", f"{ROUTER_BIN} -listen {ADDR}"], capture_output=True)
+    time.sleep(1.5)
+
 
 def start_router(policy):
-    log=open(f"{OUTDIR}/router_{policy}.log","w")
-    p=subprocess.Popen([ROUTER_BIN,"-listen",ADDR,"-backends",BACKENDS,"-policy",policy,
-                        "-snapshot-interval","300ms","-collector-url",COLLECTOR,"-max-retries","1"],
-                       stdout=log,stderr=subprocess.STDOUT)
+    os.makedirs(OUTDIR, exist_ok=True)
+    log = open(f"{OUTDIR}/router_{policy}.log", "w")
+    p = subprocess.Popen([ROUTER_BIN, "-listen", ADDR, "-backends", BACKENDS, "-policy", policy,
+                          "-snapshot-interval", "300ms", "-collector-url", COLLECTOR, "-max-retries", "1"],
+                         stdout=log, stderr=subprocess.STDOUT)
     for _ in range(40):
         try:
-            urllib.request.urlopen(URL+"/healthz",timeout=1).read(); time.sleep(1.2); return p
-        except Exception: time.sleep(0.25)
+            urllib.request.urlopen(URL + "/healthz", timeout=1).read()
+            time.sleep(1.2)
+            return p
+        except Exception:
+            time.sleep(0.25)
     return p
 
+
+def assert_independent_replicas():
+    """HARD STOP: refuse if the two backends resolve to the same vLLM runtime identity."""
+    backends = json.load(urllib.request.urlopen(URL + "/v1/backends", timeout=5))["backends"]
+    if len(backends) < 2:
+        sys.exit("HARD STOP: need >=2 backends, got %d" % len(backends))
+    ids = {}
+    for b in backends:
+        bid = b["backend"]["id"]
+        # robust runtime identity: endpoint id (host+vllm-url+boot). Fall back to instance id.
+        rid = b.get("runtime_endpoint_id") or ("inst:%s" % b.get("runtime_instance_id", 0))
+        reachable = b.get("reachable") and b.get("runtime_healthy")
+        if not reachable:
+            sys.exit(f"HARD STOP: backend {bid} not reachable/healthy — cannot prove independence")
+        if not b.get("runtime_endpoint_id") and not b.get("runtime_instance_id"):
+            sys.exit(f"HARD STOP: backend {bid} exposes no runtime identity — cannot prove independent runtime")
+        if rid in ids:
+            sys.exit(f"HARD STOP: backends {ids[rid]} and {bid} share runtime identity {rid} "
+                     f"(SAME vLLM process/KV cache). This is NOT a two-replica experiment. Refusing to run.")
+        ids[rid] = bid
+    print(f"independent-replica check PASSED: distinct runtime identities {list(ids.keys())}")
+    return ids
+
+
 def post(body, headers, timeout=60):
-    req=urllib.request.Request(URL+"/v1/chat/completions",data=body,
-        headers={"Content-Type":"application/json",**headers})
-    t0=time.time()
+    req = urllib.request.Request(URL + "/v1/chat/completions", data=body,
+                                 headers={"Content-Type": "application/json", **headers})
+    t0 = time.time()
     try:
-        with urllib.request.urlopen(req,timeout=timeout) as r:
-            r.read(); return r.status, r.headers.get("X-Backend-ID",""), (time.time()-t0)*1000
-    except Exception as e:
-        return 0, "", (time.time()-t0)*1000
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            r.read()
+            return r.status, r.headers.get("X-Backend-ID", ""), (time.time() - t0) * 1000
+    except Exception:
+        return 0, "", (time.time() - t0) * 1000
 
-def warm(prefix, tokens):
-    # one request to establish locality somewhere (router picks; we then read directories)
-    body=json.dumps({"model":MODEL,"messages":[{"role":"user","content":"warm "+("x "*20)}],"max_tokens":4}).encode()
-    post(body,{"X-Cache-Prefix-Key":prefix,"X-Cache-Prefix-Tokens":str(tokens)})
 
-def which_backend_has(prefix):
+# Hot/warm prefixes are REAL identical prompt prefixes (see experiment_protocol.md). The explicit key
+# is derived from the same shared prefix text, so synthetic key == real shared content.
+HOT_PREFIX = "You are a meticulous assistant. " + ("Shared context block. " * 40)
+WARM_PREFIXES = ["Warm pool entry %d. " % i + ("warm filler. " * 20) for i in range(8)]
+
+
+def shared_key(text):
     import hashlib
-    h=hashlib.sha256(prefix.encode()).hexdigest()
-    out=[]
-    for bid,url in [("h100a","http://127.0.0.1:19097"),("h100b","http://127.0.0.1:19098")]:
-        try:
-            d=json.load(urllib.request.urlopen(url+"/v1/cache",timeout=2))
-            if h in d.get("directory",{}): out.append(bid)
-        except Exception: pass
-    return out
+    return hashlib.sha256(text.encode()).hexdigest()[:32]
+
+
+def make_request(kind, i):
+    if kind == "hot":
+        prefix, ptoks = HOT_PREFIX, len(HOT_PREFIX) // 4
+    elif kind == "warm":
+        prefix = WARM_PREFIXES[i % len(WARM_PREFIXES)]
+        ptoks = len(prefix) // 4
+    else:
+        prefix, ptoks = "unique-%d-%d " % (i, time.time_ns()), 0
+    body = json.dumps({"model": MODEL,
+                       "messages": [{"role": "user", "content": prefix + " Q%d: reply briefly." % i}],
+                       "max_tokens": 16}).encode()
+    headers = {}
+    if kind != "unique":
+        headers = {"X-Cache-Prefix-Key": shared_key(prefix), "X-Cache-Prefix-Tokens": str(ptoks)}
+    return body, headers
+
 
 import threading, queue, random
-def run_load(n, conc, hot_prefix, hot_tokens, timeout=60):
-    jobs=queue.Queue()
+def run_load(n, conc, timeout=60):
+    jobs = queue.Queue()
     for i in range(n):
-        # 60% hot prefix, 40% unique
-        if random.random()<0.6: jobs.put(("hot",i))
-        else: jobs.put(("uniq",i))
-    res=[]; lk=threading.Lock()
+        r = random.random()
+        kind = "hot" if r < 0.6 else ("warm" if r < 0.8 else "unique")
+        jobs.put((kind, i))
+    res = []
+    lk = threading.Lock()
     def worker():
         while True:
-            try: kind,i=jobs.get_nowait()
-            except queue.Empty: return
-            body=json.dumps({"model":MODEL,"messages":[{"role":"user","content":("x "*20)+f" {i}"}],"max_tokens":16}).encode()
-            if kind=="hot":
-                st,bid,ms=post(body,{"X-Cache-Prefix-Key":hot_prefix,"X-Cache-Prefix-Tokens":str(hot_tokens)},timeout)
-            else:
-                st,bid,ms=post(body,{},timeout)
-            with lk: res.append((kind,st,bid,ms))
+            try:
+                kind, i = jobs.get_nowait()
+            except queue.Empty:
+                return
+            body, headers = make_request(kind, i)
+            st, bid, ms = post(body, headers, timeout)
+            with lk:
+                res.append((kind, st, bid, ms))
             jobs.task_done()
-    ts=[threading.Thread(target=worker) for _ in range(conc)]
-    t0=time.time();[t.start() for t in ts];[t.join() for t in ts];wall=time.time()-t0
-    return res,wall
+    ts = [threading.Thread(target=worker) for _ in range(conc)]
+    t0 = time.time(); [t.start() for t in ts]; [t.join() for t in ts]
+    return res, time.time() - t0
 
-def pct(xs,p):
-    if not xs:return 0
-    xs=sorted(xs);k=(p/100)*(len(xs)-1);lo=int(k);f=k-lo
-    return xs[-1] if lo>=len(xs)-1 else xs[lo]+f*(xs[lo+1]-xs[lo])
+
+def pct(xs, p):
+    if not xs:
+        return 0
+    xs = sorted(xs); k = (p/100)*(len(xs)-1); lo = int(k); f = k-lo
+    return xs[-1] if lo >= len(xs)-1 else xs[lo]+f*(xs[lo+1]-xs[lo])
+
 
 def main():
-    os.makedirs(OUTDIR,exist_ok=True)
-    n=int(os.environ.get("REQS","160")); conc=int(os.environ.get("CONC","12"))
-    hot_prefix="ISOHOT"; hot_tokens=1024
-    table=[]
+    os.makedirs(OUTDIR, exist_ok=True)
+    n = int(os.environ.get("REQS", "160"))
+    concs = [int(x) for x in os.environ.get("CONCS", "1,4,8,16,32").split(",")]
+    table = []
     for pol in POLICIES:
-        print(f"=== {pol} ===")
-        kill_router(); p=start_router(pol); time.sleep(1.0)
-        # warm the hot prefix on whichever backend the router picks first (establishes locality)
-        warm(hot_prefix,hot_tokens); time.sleep(0.8)
-        warmed=which_backend_has(hot_prefix)
-        res,wall=run_load(n,conc,hot_prefix,hot_tokens)
-        ok=[r for r in res if 200<=r[1]<300]
-        hot=[r for r in ok if r[0]=="hot"]
-        hot_assign={}
-        for r in hot: hot_assign[r[2]]=hot_assign.get(r[2],0)+1
-        all_assign={}
-        for r in ok: all_assign[r[2]]=all_assign.get(r[2],0)+1
-        e2e=[r[3] for r in ok]
-        # cache-hot concentration = fraction of HOT-prefix requests that hit the warmed backend
-        conc_frac=0.0
-        if hot and warmed:
-            hits=sum(v for b,v in hot_assign.items() if b in warmed)
-            conc_frac=hits/len(hot)
-        row={"policy":pol,"ok":len(ok),"failed":len(res)-len(ok),
-             "throughput_rps":round(len(ok)/wall,2) if wall>0 else 0,
-             "e2e_p50_ms":round(pct(e2e,50),1),"e2e_p95_ms":round(pct(e2e,95),1),
-             "warmed_backend":warmed,"hot_assignment":hot_assign,"all_assignment":all_assign,
-             "hot_prefix_concentration":round(conc_frac,3)}
-        table.append(row)
-        print(f"  rps={row['throughput_rps']} e2e_p50={row['e2e_p50_ms']} e2e_p95={row['e2e_p95_ms']} "
-              f"warmed={warmed} hot_assign={hot_assign} conc={row['hot_prefix_concentration']}")
-        try: p.terminate()
-        except Exception: pass
-        time.sleep(1.0)
-    json.dump(table,open(f"{OUTDIR}/comparison.json","w"),indent=2)
-    print("\n=== EQUAL-CAPABILITY COMPARISON (cache locality = only asymmetry) ===")
-    print(f"{'policy':<32}{'rps':>7}{'e2e_p50':>9}{'e2e_p95':>9}{'hot_conc':>9}  hot_assign")
-    for r in table:
-        print(f"{r['policy']:<32}{r['throughput_rps']:>7}{r['e2e_p50_ms']:>9}{r['e2e_p95_ms']:>9}{r['hot_prefix_concentration']:>9}  {r['hot_assignment']}")
+        kill_router()
+        p = start_router(pol)
+        time.sleep(0.8)
+        assert_independent_replicas()  # HARD STOP if shared runtime
+        for conc in concs:
+            res, wall = run_load(n, conc)
+            ok = [r for r in res if 200 <= r[1] < 300]
+            e2e = [r[3] for r in ok]
+            assign = {}
+            for r in ok:
+                assign[r[2]] = assign.get(r[2], 0) + 1
+            hot = [r for r in ok if r[0] == "hot"]
+            hot_assign = {}
+            for r in hot:
+                hot_assign[r[2]] = hot_assign.get(r[2], 0) + 1
+            row = {"policy": pol, "concurrency": conc, "ok": len(ok), "failed": len(res)-len(ok),
+                   "throughput_rps": round(len(ok)/wall, 2) if wall > 0 else 0,
+                   "e2e_p50_ms": round(pct(e2e, 50), 1), "e2e_p95_ms": round(pct(e2e, 95), 1),
+                   "e2e_p99_ms": round(pct(e2e, 99), 1), "assignment": assign, "hot_assignment": hot_assign}
+            table.append(row)
+            print(f"  {pol:32s} c={conc:<3d} rps={row['throughput_rps']:<7} "
+                  f"e2e_p50={row['e2e_p50_ms']:<7} p95={row['e2e_p95_ms']:<8} assign={assign}")
+        try:
+            p.terminate()
+        except Exception:
+            pass
+        time.sleep(0.8)
+    json.dump(table, open(f"{OUTDIR}/comparison.json", "w"), indent=2)
+    print("\nwrote", f"{OUTDIR}/comparison.json")
     return 0
 
-if __name__=="__main__": sys.exit(main())
+
+if __name__ == "__main__":
+    sys.exit(main())

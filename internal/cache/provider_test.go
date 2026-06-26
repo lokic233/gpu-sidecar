@@ -24,28 +24,69 @@ func TestDisabledProvider(t *testing.T) {
 	}
 }
 
-func TestExplicitProvider_ColdThenWarm(t *testing.T) {
+func TestExplicitProvider_ColdWarmingReady(t *testing.T) {
 	p := NewExplicitProvider(ProviderConfig{Mode: ModeExplicit, Index: IndexConfig{
 		MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: time.Hour}})
 	_ = p.Start(context.Background())
 	key := HashKey("group-hot")
-	// cold: never served on this backend yet
+	// ABSENT: never served on this backend yet
+	if mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200}); mr.MatchedPrefixTokens != 0 || mr.Reason != "absent_prefix" {
+		t.Fatalf("expected absent (0 matched), got %+v", mr)
+	}
+	// WARMING: dispatched but not yet first-token -> NOT a reusable hit
+	p.BeginWarm(key, 200)
+	if mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200}); mr.MatchedPrefixTokens != 0 || mr.Reason != "warming_prefix" {
+		t.Fatalf("WARMING must not be a hit, got %+v", mr)
+	}
+	// READY: first token / completion -> reusable
+	p.MarkReady(key)
 	mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200})
-	if mr.MatchedPrefixTokens != 0 {
-		t.Fatalf("expected cold (0 matched) on first lookup, got %d", mr.MatchedPrefixTokens)
+	if mr.MatchedPrefixTokens != 200 || mr.Reason != "ready_prefix" {
+		t.Fatalf("expected READY 200 matched, got %+v", mr)
 	}
-	if !mr.Supported || !mr.MatchSupported {
-		t.Fatalf("explicit mode must be supported+match-capable")
+}
+
+func TestExplicitProvider_WarmingNeverDirectory(t *testing.T) {
+	p := NewExplicitProvider(ProviderConfig{Mode: ModeExplicit, Index: DefaultIndexConfig()})
+	_ = p.Start(context.Background())
+	p.BeginWarm(HashKey("w"), 100)
+	if len(p.Directory(100)) != 0 {
+		t.Fatalf("a WARMING prefix must NOT appear in the routable directory")
 	}
-	// observe (this backend served & cached it)
-	p.Observe(key, 200)
-	// warm: subsequent lookup matches
-	mr = p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200})
-	if mr.MatchedPrefixTokens != 200 {
-		t.Fatalf("expected warm 200 matched, got %d", mr.MatchedPrefixTokens)
+	p.MarkReady(HashKey("w"))
+	if p.Directory(100)[HashKey("w")] != 100 {
+		t.Fatalf("a READY prefix must appear in the directory")
 	}
-	if mr.Confidence <= 0 {
-		t.Fatalf("expected positive confidence when warm")
+}
+
+func TestExplicitProvider_AbortBeforeReady(t *testing.T) {
+	p := NewExplicitProvider(ProviderConfig{Mode: ModeExplicit, Index: DefaultIndexConfig()})
+	_ = p.Start(context.Background())
+	key := HashKey("g")
+	p.BeginWarm(key, 200)
+	p.AbortWarm(key) // pre-first-token failure / cancel
+	if mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200}); mr.MatchedPrefixTokens != 0 {
+		t.Fatalf("aborted warm must NOT become a hit, got %d", mr.MatchedPrefixTokens)
+	}
+	if len(p.Directory(100)) != 0 {
+		t.Fatalf("aborted warm must not be in directory")
+	}
+}
+
+func TestExplicitProvider_ConcurrentWarmNoFalseReady(t *testing.T) {
+	p := NewExplicitProvider(ProviderConfig{Mode: ModeExplicit, Index: DefaultIndexConfig()})
+	_ = p.Start(context.Background())
+	key := HashKey("g")
+	// two concurrent requests warm the same key; the first aborts, the second readies.
+	p.BeginWarm(key, 200)
+	p.BeginWarm(key, 200)
+	p.AbortWarm(key) // first request fails — but a second is still warming
+	if st, _ := p.ResidencyStateOf(key); st == StateReady {
+		t.Fatalf("must not be READY while a warmer is still in flight and none readied")
+	}
+	p.MarkReady(key) // second request produces a token
+	if mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200}); mr.MatchedPrefixTokens != 200 {
+		t.Fatalf("expected READY after the surviving warmer completes, got %d", mr.MatchedPrefixTokens)
 	}
 }
 
@@ -65,7 +106,8 @@ func TestExplicitProvider_MatchCappedByClaim(t *testing.T) {
 	p := NewExplicitProvider(ProviderConfig{Mode: ModeExplicit, Index: DefaultIndexConfig()})
 	_ = p.Start(context.Background())
 	key := HashKey("g")
-	p.Observe(key, 500) // recorded 500
+	p.BeginWarm(key, 500)
+	p.MarkReady(key) // recorded 500, READY
 	mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 100}) // request claims only 100
 	if mr.MatchedPrefixTokens != 100 {
 		t.Fatalf("expected match capped at claimed 100, got %d", mr.MatchedPrefixTokens)
@@ -76,21 +118,24 @@ func TestExplicitProvider_RuntimeRestartInvalidates(t *testing.T) {
 	p := NewExplicitProvider(ProviderConfig{Mode: ModeExplicit, Index: DefaultIndexConfig()})
 	_ = p.Start(context.Background())
 	key := HashKey("g")
-	p.Observe(key, 200)
+	p.BeginWarm(key, 200)
+	p.MarkReady(key)
 	if mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200}); mr.MatchedPrefixTokens != 200 {
-		t.Fatalf("precondition: expected warm")
+		t.Fatalf("precondition: expected READY")
 	}
 	p.OnRuntimeRestart()
 	if mr := p.Lookup(PrefixQuery{PrefixKeyHash: key, PrefixTokens: 200}); mr.MatchedPrefixTokens != 0 {
-		t.Fatalf("expected cold after runtime restart, got %d", mr.MatchedPrefixTokens)
+		t.Fatalf("expected ABSENT after runtime restart, got %d", mr.MatchedPrefixTokens)
 	}
 }
 
-func TestExplicitProvider_DirectoryReflectsObservations(t *testing.T) {
+func TestExplicitProvider_DirectoryReflectsReady(t *testing.T) {
 	p := NewExplicitProvider(ProviderConfig{Mode: ModeExplicit, Index: DefaultIndexConfig()})
 	_ = p.Start(context.Background())
-	p.Observe(HashKey("a"), 100)
-	p.Observe(HashKey("b"), 200)
+	for _, k := range []string{"a", "b"} {
+		p.BeginWarm(HashKey(k), map[string]int{"a": 100, "b": 200}[k])
+		p.MarkReady(HashKey(k))
+	}
 	d := p.Directory(100)
 	if d[HashKey("a")] != 100 || d[HashKey("b")] != 200 {
 		t.Fatalf("directory mismatch: %+v", d)

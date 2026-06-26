@@ -54,6 +54,7 @@ func mapVLLMMetrics(body string, m *rt.RuntimeMetrics) {
 	*m = rt.RuntimeMetrics{
 		Timestamp: m.Timestamp, Healthy: m.Healthy, ScrapeOK: m.ScrapeOK,
 		ScrapeLatencyMs: m.ScrapeLatencyMs, ModelName: m.ModelName, RuntimeVersion: m.RuntimeVersion,
+		RuntimeInstanceID: m.RuntimeInstanceID,
 		RawMetricSources: src, RequestsRunning: rt.Unsup[float64](), RequestsWaiting: rt.Unsup[float64](),
 		KVCacheUtil: rt.Unsup[float64](), ActiveSequences: rt.Unsup[float64](),
 		PromptThroughput: rt.Unsup[float64](), GenThroughput: rt.Unsup[float64](),
@@ -89,6 +90,11 @@ func mapVLLMMetrics(body string, m *rt.RuntimeMetrics) {
 	setSum(&m.PrefixCacheQueries, "vllm:prefix_cache_queries_total")
 	setSum(&m.RequestsSuccess, "vllm:request_success_total")
 	setSum(&m.RequestsFailed, "vllm:request_failure_total")
+	// Runtime instance identity: process_start_time_seconds uniquely fingerprints the upstream PROCESS.
+	if v, ok := firstByName(samples, "process_start_time_seconds"); ok {
+		m.RuntimeInstanceID = v
+		src["runtime_instance_id"] = "process_start_time_seconds"
+	}
 
 	// Honestly record which normalized fields are unsupported on this version.
 	type fc struct { name string; f rt.Field[float64] }

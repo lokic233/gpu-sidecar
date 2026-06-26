@@ -75,6 +75,19 @@ type Ticket struct {
 	q *Queue
 	state ReqState
 	mu    sync.Mutex
+
+	// --- cache/work lifecycle carried on the ticket (Round-5 hardening) ---
+	// reservation is the token work-accounting handle (nil when work accounting is off). Created at
+	// admission, activated at dispatch, released ONCE on the terminal path.
+	reservation *Reservation
+	// prefixKeyHash is the HASHED explicit-prefix key for this request ("" when not cache-eligible).
+	prefixKeyHash string
+	// prefixTokens is the claimed prefix length (bounded).
+	prefixTokens int
+	// warmBegun is true once BeginWarm was called, so the terminal path knows to MarkReady/AbortWarm.
+	warmBegun bool
+	// resolved guards the cache/work terminal resolution so it runs exactly once.
+	resolved bool
 }
 
 func (t *Ticket) Context() context.Context { return t.ctx }

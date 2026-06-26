@@ -12,8 +12,9 @@ import (
 type CacheAwareConfig struct {
 	// Prefill: per-uncached-prompt-token cost (ms/token). Dominant term for long uncached inputs.
 	PrefillMsPerToken float64
-	// Decode: per-output-token cost (ms/token). Uses measured service rate when available.
-	DecodeMsPerToken float64
+	// FallbackDecodeMsPerToken: GLOBAL conservative decode cost (ms/token) used when a backend has NO
+	// configured service profile. Deliberately NOT derived from live aggregate throughput (see §P1).
+	FallbackDecodeMsPerToken float64
 	// QueueDelay: per-queued-or-inflight unit cost (ms). Models head-of-line delay from the host
 	// admission queue AND the vLLM runtime waiting count.
 	QueueMsPerQueued        float64
@@ -30,8 +31,6 @@ type CacheAwareConfig struct {
 	ConfidenceFloor float64
 	// DefaultDecodeTokens: assumed output length when the request does not specify max_tokens.
 	DefaultDecodeTokens int
-	// DefaultServiceRateTokPerSec: fallback decode rate when no measured rate exists (=> DecodeMsPerToken).
-	DefaultServiceRateTokPerSec float64
 }
 
 // DefaultCacheAwareConfig returns documented, conservative defaults. These are first-order estimates
@@ -40,24 +39,28 @@ type CacheAwareConfig struct {
 // PPO learns a residual — not a final calibrated latency predictor.
 func DefaultCacheAwareConfig() CacheAwareConfig {
 	return CacheAwareConfig{
-		PrefillMsPerToken:           0.05, // ~20k uncached prompt tok/s prefill (order-of-magnitude)
-		DecodeMsPerToken:            0.30, // ~3.3k tok/s decode fallback when no measured rate
-		QueueMsPerQueued:            8.0,  // each already-queued request adds ~8ms head-of-line
-		RuntimeWaitingMsPerReq:      6.0,  // each vLLM-waiting request adds ~6ms
-		RuntimeRunningMsPerReq:      1.5,  // each running seq adds minor batched contention
-		CacheStalenessPenaltyMs:     25.0, // full penalty when confidence=0 but plane is "supported"
-		KVPressurePenaltyMs:         40.0, // full penalty when KV headroom=0
-		ConfidenceFloor:             0.30, // ignore locality below 30% confidence
-		DefaultDecodeTokens:         128,
-		DefaultServiceRateTokPerSec: 0,    // 0 => use DecodeMsPerToken
+		PrefillMsPerToken:        0.05, // ~20k uncached prompt tok/s prefill (order-of-magnitude)
+		FallbackDecodeMsPerToken: 0.30, // ~3.3k tok/s GLOBAL fallback when no per-backend profile
+		QueueMsPerQueued:         8.0,  // each already-queued request adds ~8ms head-of-line
+		RuntimeWaitingMsPerReq:   6.0,  // each vLLM-waiting request adds ~6ms
+		RuntimeRunningMsPerReq:   1.5,  // each running seq adds minor batched contention
+		CacheStalenessPenaltyMs:  25.0, // full penalty when confidence=0 but plane is "supported"
+		KVPressurePenaltyMs:      40.0, // full penalty when KV headroom=0
+		ConfidenceFloor:          0.30, // ignore locality below 30% confidence
+		DefaultDecodeTokens:      128,
 	}
 }
 
-// CacheLocator resolves the matched prefix-token count for a (backend, request) pair from the
-// router's materialized cache directory (O(1) local lookup; NO per-request network query). The
-// Registry implements this.
-type CacheLocator interface {
-	LookupPrefixTokens(backendID, prefixKeyHash string) int
+// BackendProfile is a backend's SLOW/STATIC service capability — calibrated or configured offline,
+// NOT derived from live aggregate throughput (see §P1: using live aggregate Δtokens/Δt as
+// per-request decode speed creates a busy→"faster"→busier feedback loop under continuous batching).
+// A minimal profile is just decode/prefill ms-per-token; richer curves can be added later.
+type BackendProfile struct {
+	DecodeMsPerToken  float64 `json:"decode_ms_per_token"`  // per-request decode cost
+	PrefillMsPerToken float64 `json:"prefill_ms_per_token"` // per-uncached-token prefill cost (0 => use config)
+	Version           string  `json:"version,omitempty"`
+	// Confidence in [0,1]; informational. 0 / absent => the global fallback is used (recorded).
+	Confidence float64 `json:"confidence,omitempty"`
 }
 
 // CacheAwarePolicy implements cache_aware_estimated_finish. It estimates each eligible backend's
@@ -66,20 +69,20 @@ type CacheLocator interface {
 //	finish = queue_delay + prefill(uncached_prompt_tokens) + decode(expected_output)
 //	       + cache_staleness_penalty + kv_pressure_penalty
 //
-// and selects the minimum. A cache-hot but overloaded backend can still lose (its queue/KV terms
-// dominate); a lightly loaded cache-hot backend normally wins (its prefill term shrinks). When cache
-// observation is unsupported or stale, the locality term is dropped and the policy reduces to the
-// existing load-aware estimate. It NEVER optimizes raw cache-hit rate and adds NO equal-utilization
-// reward.
+// Locality is resolved from the SAME immutable snapshot passed to SelectBackend (no mutable global /
+// no cross-generation mix). Decode cost comes from a per-backend service PROFILE (or a global
+// fallback) — never from live aggregate throughput. A cache-hot but overloaded backend can still
+// lose; an unsupported/stale cache observation drops the locality term. No raw-hit-rate or
+// utilization-fairness reward.
 type CacheAwarePolicy struct {
-	cfg     CacheAwareConfig
-	locator CacheLocator
+	cfg      CacheAwareConfig
+	profiles map[string]BackendProfile // backendID -> static service profile (may be nil/empty)
 }
 
-// NewCacheAwarePolicy builds the policy. locator may be nil (then prefix matching falls back to the
-// per-request PrefixMatchedTokens already set on BackendState, or 0).
-func NewCacheAwarePolicy(cfg CacheAwareConfig, locator CacheLocator) *CacheAwarePolicy {
-	return &CacheAwarePolicy{cfg: cfg, locator: locator}
+// NewCacheAwarePolicy builds the policy. profiles may be nil/empty (then the global fallback decode
+// cost is used and recorded as a fallback per candidate).
+func NewCacheAwarePolicy(cfg CacheAwareConfig, profiles map[string]BackendProfile) *CacheAwarePolicy {
+	return &CacheAwarePolicy{cfg: cfg, profiles: profiles}
 }
 
 // candidateCost is the breakdown for one backend (also surfaced into trajectory state for RL).
@@ -96,10 +99,13 @@ type candidateCost struct {
 	finishMs             float64
 	cacheUsed            bool
 	cacheConfidence      float64
+	profileFallback      bool // true when no per-backend profile existed (global fallback used)
 }
 
-// matchedTokensFor resolves matched prefix tokens for a backend honoring confidence/support gating.
-func (p *CacheAwarePolicy) matchedTokensFor(req RequestFeatures, b BackendState) (int, bool, float64) {
+// matchedTokensFor resolves matched prefix tokens for a backend FROM THE SNAPSHOT, honoring
+// support/confidence gating. Only READY locality in the snapshot directory counts (a WARMING prefix
+// never appears there). Returns (matched, localityUsable, confidence).
+func (p *CacheAwarePolicy) matchedTokensFor(req RequestFeatures, b BackendState, snap *BackendSnapshot) (int, bool, float64) {
 	// Unsupported cache observation => never a real zero-match; just no locality (fall back).
 	if !b.CacheObservationSupported {
 		return 0, false, 0
@@ -111,13 +117,11 @@ func (p *CacheAwarePolicy) matchedTokensFor(req RequestFeatures, b BackendState)
 	if !req.CacheEligible || req.PrefixKeyHash == "" {
 		return 0, true, b.CacheConfidence
 	}
-	matched := b.PrefixMatchedTokens
-	if p.locator != nil {
-		if m := p.locator.LookupPrefixTokens(b.Backend.ID, req.PrefixKeyHash); m > 0 {
-			matched = m
-		}
+	// Resolve from the SAME snapshot (atomic generation) — not a mutable global directory.
+	matched := snap.LookupPrefixTokens(b.Backend.ID, req.PrefixKeyHash)
+	if matched == 0 && b.PrefixMatchedTokens > 0 {
+		matched = b.PrefixMatchedTokens // test/explicit pre-set fallback
 	}
-	// matched cannot exceed the request's claimed prefix length or its input length.
 	if req.PrefixTokens > 0 && matched > req.PrefixTokens {
 		matched = req.PrefixTokens
 	}
@@ -127,24 +131,33 @@ func (p *CacheAwarePolicy) matchedTokensFor(req RequestFeatures, b BackendState)
 	return matched, true, b.CacheConfidence
 }
 
-func (p *CacheAwarePolicy) decodeMsPerToken(b BackendState) float64 {
-	// Prefer measured service rate (tokens/s) when reliable; else configured fallback.
-	if b.ServiceRateSupported && b.GenTokensPerSec > 1 {
-		return 1000.0 / b.GenTokensPerSec
+// decodeMsPerToken returns the per-request decode cost from the backend's static PROFILE, or the
+// global fallback. It NEVER uses live aggregate throughput (which would create a busy→busier loop).
+func (p *CacheAwarePolicy) decodeMsPerToken(b BackendState) (float64, bool) {
+	if p.profiles != nil {
+		if prof, ok := p.profiles[b.Backend.ID]; ok && prof.DecodeMsPerToken > 0 {
+			return prof.DecodeMsPerToken, false
+		}
 	}
-	if p.cfg.DefaultServiceRateTokPerSec > 1 {
-		return 1000.0 / p.cfg.DefaultServiceRateTokPerSec
-	}
-	return p.cfg.DecodeMsPerToken
+	return p.cfg.FallbackDecodeMsPerToken, true // fallback used (recorded)
 }
 
-func (p *CacheAwarePolicy) cost(req RequestFeatures, b BackendState) candidateCost {
+func (p *CacheAwarePolicy) prefillMsPerToken(b BackendState) float64 {
+	if p.profiles != nil {
+		if prof, ok := p.profiles[b.Backend.ID]; ok && prof.PrefillMsPerToken > 0 {
+			return prof.PrefillMsPerToken
+		}
+	}
+	return p.cfg.PrefillMsPerToken
+}
+
+func (p *CacheAwarePolicy) cost(req RequestFeatures, b BackendState, snap *BackendSnapshot) candidateCost {
 	c := candidateCost{backendID: b.Backend.ID}
 	inputLen := req.InputLenEst
 	if inputLen < 0 {
 		inputLen = 0
 	}
-	matched, used, conf := p.matchedTokensFor(req, b)
+	matched, used, conf := p.matchedTokensFor(req, b, snap)
 	c.matchedPrefixTokens = matched
 	c.cacheUsed = used && matched > 0
 	c.cacheConfidence = conf
@@ -163,18 +176,20 @@ func (p *CacheAwarePolicy) cost(req RequestFeatures, b BackendState) candidateCo
 		out = p.cfg.DefaultDecodeTokens
 	}
 
-	c.estPrefillMs = float64(uncached) * p.cfg.PrefillMsPerToken
-	c.estDecodeMs = float64(out) * p.decodeMsPerToken(b)
+	decodeMs, fallback := p.decodeMsPerToken(b)
+	c.profileFallback = fallback
+	c.estPrefillMs = float64(uncached) * p.prefillMsPerToken(b)
+	c.estDecodeMs = float64(out) * decodeMs
+	// Live CONGESTION (not capability) drives the queue term: queued + inflight + runtime waiting/
+	// running. A growing backlog raises this term, so a busy backend becomes LESS attractive — the
+	// opposite of the aggregate-throughput feedback loop we removed.
 	c.estQueueMs = float64(b.QueueDepth+b.QueueInflight)*p.cfg.QueueMsPerQueued +
 		b.RuntimeWaiting*p.cfg.RuntimeWaitingMsPerReq +
 		b.RuntimeRunning*p.cfg.RuntimeRunningMsPerReq
 
-	// Cache staleness penalty: only when the plane is supported but we could not trust locality.
-	// (Discourages a backend whose cache we cannot verify, scaled by how unconfident we are.)
 	if b.CacheObservationSupported {
 		c.stalenessPenaltyMs = p.cfg.CacheStalenessPenaltyMs * (1 - clamp01(b.CacheConfidence))
 	}
-	// KV / eviction pressure penalty: only when KV headroom is measurable.
 	if b.KVHeadroomSupported {
 		c.kvPenaltyMs = p.cfg.KVPressurePenaltyMs * (1 - clamp01(b.KVHeadroom))
 	}
@@ -191,7 +206,7 @@ func (p *CacheAwarePolicy) SelectBackend(req RequestFeatures, snap *BackendSnaps
 	}
 	costs := make([]candidateCost, 0, len(e))
 	for _, b := range e {
-		costs = append(costs, p.cost(req, b))
+		costs = append(costs, p.cost(req, b, snap))
 	}
 	// Order-independence: pick min finishMs; break ties by logical backend id (lexicographic) so the
 	// chosen LOGICAL backend never depends on snapshot iteration order.
@@ -202,13 +217,21 @@ func (p *CacheAwarePolicy) SelectBackend(req RequestFeatures, snap *BackendSnaps
 		return costs[i].backendID < costs[j].backendID
 	})
 	best := costs[0]
-	reason := fmt.Sprintf("min_finish=%.1fms(q=%.1f+prefill=%.1f[uncached=%d/match=%d]+decode=%.1f+stale=%.1f+kv=%.1f)",
+	reason := fmt.Sprintf("min_finish=%.1fms(q=%.1f+prefill=%.1f[uncached=%d/match=%d]+decode=%.1f+stale=%.1f+kv=%.1f%s)",
 		best.finishMs, best.estQueueMs, best.estPrefillMs, best.uncachedPromptTokens,
-		best.matchedPrefixTokens, best.estDecodeMs, best.stalenessPenaltyMs, best.kvPenaltyMs)
+		best.matchedPrefixTokens, best.estDecodeMs, best.stalenessPenaltyMs, best.kvPenaltyMs,
+		fallbackTag(best.profileFallback))
 	return RouteDecision{
-		BackendID: best.backendID, PolicyName: "cache_aware_estimated_finish", PolicyVersion: "1",
+		BackendID: best.backendID, PolicyName: "cache_aware_estimated_finish", PolicyVersion: "2",
 		Reason: reason,
 	}, nil
+}
+
+func fallbackTag(fb bool) string {
+	if fb {
+		return "+profile_fallback"
+	}
+	return ""
 }
 
 // ScoreBreakdown returns the full per-backend cost breakdown for the request (for trajectory/RL
@@ -217,7 +240,7 @@ func (p *CacheAwarePolicy) ScoreBreakdown(req RequestFeatures, snap *BackendSnap
 	e := eligible(snap)
 	out := make([]CandidateScore, 0, len(e))
 	for _, b := range e {
-		c := p.cost(req, b)
+		c := p.cost(req, b, snap)
 		out = append(out, CandidateScore{
 			BackendID:            c.backendID,
 			UncachedPromptTokens: c.uncachedPromptTokens,
@@ -228,10 +251,11 @@ func (p *CacheAwarePolicy) ScoreBreakdown(req RequestFeatures, snap *BackendSnap
 			EstDecodeMs:          c.estDecodeMs,
 			StalenessPenaltyMs:   c.stalenessPenaltyMs,
 			KVPenaltyMs:          c.kvPenaltyMs,
-			EstPrefillSavedMs:    float64(c.matchedPrefixTokens) * p.cfg.PrefillMsPerToken,
+			EstPrefillSavedMs:    float64(c.matchedPrefixTokens) * p.prefillMsPerToken(b),
 			FinalScoreMs:         c.finishMs,
 			CacheUsed:            c.cacheUsed,
 			CacheConfidence:      c.cacheConfidence,
+			ProfileFallback:      c.profileFallback,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -259,18 +283,15 @@ type CandidateScore struct {
 	FinalScoreMs         float64 `json:"final_analytical_score_ms"`
 	CacheUsed            bool    `json:"cache_used"`
 	CacheConfidence      float64 `json:"cache_confidence"`
+	ProfileFallback      bool    `json:"profile_fallback"`
 }
 
 // CacheAffinityOnlyPolicy is a deliberately naive baseline for the experimental comparison: it
 // maximizes matched prefix tokens (herds onto cache-hot backends), ignoring congestion. It exists to
 // demonstrate why affinity-only routing is bad under load. NOT for production use.
-type CacheAffinityOnlyPolicy struct {
-	locator CacheLocator
-}
+type CacheAffinityOnlyPolicy struct{}
 
-func NewCacheAffinityOnlyPolicy(locator CacheLocator) *CacheAffinityOnlyPolicy {
-	return &CacheAffinityOnlyPolicy{locator: locator}
-}
+func NewCacheAffinityOnlyPolicy() *CacheAffinityOnlyPolicy { return &CacheAffinityOnlyPolicy{} }
 
 func (p *CacheAffinityOnlyPolicy) SelectBackend(req RequestFeatures, snap *BackendSnapshot) (RouteDecision, error) {
 	e := eligible(snap)
@@ -281,8 +302,8 @@ func (p *CacheAffinityOnlyPolicy) SelectBackend(req RequestFeatures, snap *Backe
 	bestMatch := -1
 	for i, b := range e {
 		m := b.PrefixMatchedTokens
-		if p.locator != nil && req.PrefixKeyHash != "" && b.CacheObservationSupported {
-			if v := p.locator.LookupPrefixTokens(b.Backend.ID, req.PrefixKeyHash); v > m {
+		if req.PrefixKeyHash != "" && b.CacheObservationSupported {
+			if v := snap.LookupPrefixTokens(b.Backend.ID, req.PrefixKeyHash); v > m {
 				m = v
 			}
 		}
@@ -293,7 +314,7 @@ func (p *CacheAffinityOnlyPolicy) SelectBackend(req RequestFeatures, snap *Backe
 		}
 	}
 	return RouteDecision{BackendID: e[bestIdx].Backend.ID, PolicyName: "cache_affinity_only",
-		PolicyVersion: "1", Reason: fmt.Sprintf("max_matched_prefix=%d", bestMatch)}, nil
+		PolicyVersion: "2", Reason: fmt.Sprintf("max_matched_prefix=%d", bestMatch)}, nil
 }
 
 func clamp01(x float64) float64 {

@@ -34,6 +34,20 @@ type Provider interface {
 	Directory(max int) map[string]int
 }
 
+// ResidencyObserver is the lifecycle hook the data-plane proxy uses to drive the per-prefix
+// residency state machine (ABSENT->WARMING->READY). Implemented by the explicit provider; the
+// disabled/native providers implement it as no-ops (they don't model synthetic residency). A
+// WARMING prefix is never a reusable hit, so a request that aborts before readiness cannot leave a
+// false-positive cache entry.
+type ResidencyObserver interface {
+	// BeginWarm: a cache-eligible request was dispatched to the local runtime for keyHash.
+	BeginWarm(keyHash string, tokens int)
+	// MarkReady: the warming request produced its first token / completed successfully.
+	MarkReady(keyHash string)
+	// AbortWarm: the warming request failed before readiness (pre-first-token / cancel / non-2xx).
+	AbortWarm(keyHash string)
+}
+
 // HashKey returns a hex-encoded SHA-256 of an opaque key. Used to ensure raw experiment keys are
 // NEVER stored or emitted. Stable across processes (so the router and sidecar agree). An empty input
 // hashes to "" (not eligible) rather than the hash of the empty string, so absence stays absence.

@@ -142,10 +142,11 @@ func (p *HealthGatedLeastPressurePolicy) SelectBackend(_ RequestFeatures, snap *
 // PolicyByName returns a baseline policy by name. For cache-aware policies, pass a non-nil locator
 // (the Registry) so per-request prefix matching uses the materialized directory; nil is tolerated
 // (falls back to BackendState.PrefixMatchedTokens / 0).
-func PolicyByName(name string) RoutingPolicy { return PolicyByNameWithLocator(name, nil) }
+func PolicyByName(name string) RoutingPolicy { return PolicyByNameWithProfiles(name, nil) }
 
-// PolicyByNameWithLocator is PolicyByName with an explicit cache locator for cache-aware policies.
-func PolicyByNameWithLocator(name string, locator CacheLocator) RoutingPolicy {
+// PolicyByNameWithProfiles is PolicyByName with optional per-backend static service profiles for the
+// cache-aware policy. profiles may be nil (global fallback decode cost is used).
+func PolicyByNameWithProfiles(name string, profiles map[string]BackendProfile) RoutingPolicy {
 	switch name {
 	case "round_robin":
 		return &RoundRobinPolicy{}
@@ -156,9 +157,9 @@ func PolicyByNameWithLocator(name string, locator CacheLocator) RoutingPolicy {
 	case "health_gated_least_pressure":
 		return &HealthGatedLeastPressurePolicy{}
 	case "cache_aware_estimated_finish":
-		return NewCacheAwarePolicy(DefaultCacheAwareConfig(), locator)
+		return NewCacheAwarePolicy(DefaultCacheAwareConfig(), profiles)
 	case "cache_affinity_only":
-		return NewCacheAffinityOnlyPolicy(locator)
+		return NewCacheAffinityOnlyPolicy()
 	default:
 		return &LeastQueuedPolicy{}
 	}

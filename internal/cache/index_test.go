@@ -248,3 +248,120 @@ func keyN(i int) string {
 	b[7] = hex[i&0xf]
 	return string(b)
 }
+
+
+// --- Round-5 hardening: event ordering + trust-state tests ---
+
+func TestIndex_OldRemoveCannotOverrideNewerStore(t *testing.T) {
+	clk := newClock(time.Unix(1000, 0))
+	idx := newTestIndex(clk, IndexConfig{MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: time.Hour})
+	// newer store at seq 10
+	idx.ApplyStore(10, "k", "", 16, 16)
+	// an OLD remove (seq 5) arrives late — must NOT delete the newer store
+	idx.ApplyRemove(5, "k")
+	if tok, _, _ := idx.LookupKey("k"); tok != 16 {
+		t.Fatalf("old remove must not delete newer store, got %d", tok)
+	}
+}
+
+func TestIndex_OldStoreCannotResurrectNewerRemove(t *testing.T) {
+	clk := newClock(time.Unix(1000, 0))
+	idx := newTestIndex(clk, IndexConfig{MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: time.Hour})
+	idx.ApplyStore(5, "k", "", 16, 16)
+	idx.ApplyRemove(10, "k") // newer removal
+	idx.ApplyStore(7, "k", "", 16, 16) // OLD store (seq 7 < 10) must NOT resurrect the removed block
+	if tok, _, _ := idx.LookupKey("k"); tok != 0 {
+		t.Fatalf("old store must not resurrect newer removal, got %d", tok)
+	}
+}
+
+func TestIndex_UnresolvedGapZeroesConfidenceAndDirectory(t *testing.T) {
+	clk := newClock(time.Unix(1000, 0))
+	idx := newTestIndex(clk, IndexConfig{MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: time.Hour})
+	idx.ApplyStore(1, "k1", "", 16, 16)
+	if c := idx.SnapshotMeta().Confidence; c <= 0 {
+		t.Fatalf("precondition: fresh confidence > 0, got %f", c)
+	}
+	idx.ApplyStore(5, "k2", "", 16, 16) // gap: missed 2,3,4 -> unresolved gap
+	s := idx.SnapshotMeta()
+	if s.Confidence != 0 {
+		t.Fatalf("unresolved gap must zero confidence, got %f", s.Confidence)
+	}
+	if s.SequenceHealthy || !s.UnresolvedGap {
+		t.Fatalf("expected sequence_healthy=false, unresolved_gap=true; got %+v", s)
+	}
+	if len(idx.Directory(100)) != 0 {
+		t.Fatalf("no matchable directory may be published during an unresolved gap")
+	}
+}
+
+func TestIndex_GapTrustRestoredByReset(t *testing.T) {
+	clk := newClock(time.Unix(1000, 0))
+	idx := newTestIndex(clk, IndexConfig{MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: time.Hour})
+	idx.ApplyStore(1, "k1", "", 16, 16)
+	idx.ApplyStore(5, "k2", "", 16, 16) // gap
+	if idx.SnapshotMeta().Confidence != 0 {
+		t.Fatalf("precondition: gap zeroes confidence")
+	}
+	idx.Reset("rebuild") // verified rebuild restores trust
+	idx.ApplyStore(1, "k3", "", 16, 16)
+	s := idx.SnapshotMeta()
+	if !s.SequenceHealthy || s.UnresolvedGap {
+		t.Fatalf("reset must restore sequence trust, got %+v", s)
+	}
+	if s.Confidence <= 0 {
+		t.Fatalf("confidence must recover after reset+fresh event, got %f", s.Confidence)
+	}
+}
+
+func TestIndex_GapTrustRestoredByAllClear(t *testing.T) {
+	clk := newClock(time.Unix(1000, 0))
+	idx := newTestIndex(clk, IndexConfig{MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: time.Hour})
+	idx.ApplyStore(1, "k1", "", 16, 16)
+	idx.ApplyStore(9, "k2", "", 16, 16) // gap
+	if !idx.SnapshotMeta().UnresolvedGap {
+		t.Fatalf("precondition: unresolved gap")
+	}
+	idx.ApplyClear(10) // AllBlocksCleared is a verified rebuild boundary
+	if idx.SnapshotMeta().UnresolvedGap {
+		t.Fatalf("all-clear must clear the unresolved-gap flag")
+	}
+}
+
+func TestIndex_StaleCounterIncrementsOncePerTransition(t *testing.T) {
+	clk := newClock(time.Unix(1000, 0))
+	idx := newTestIndex(clk, IndexConfig{MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: 5 * time.Second})
+	idx.ApplyStore(1, "k1", "", 16, 16)
+	clk.advance(6 * time.Second) // now stale
+	// poll many times while stale — counter must increment EXACTLY ONCE (the fresh->stale transition)
+	for i := 0; i < 5; i++ {
+		_ = idx.SnapshotMeta()
+	}
+	if got := idx.SnapshotMeta().StaleInvalidations; got != 1 {
+		t.Fatalf("stale counter must increment once per fresh->stale transition, got %d", got)
+	}
+	// refresh -> fresh again, then stale again -> second increment
+	idx.ApplyStore(2, "k2", "", 16, 16)
+	_ = idx.SnapshotMeta() // observe fresh
+	clk.advance(6 * time.Second)
+	for i := 0; i < 3; i++ {
+		_ = idx.SnapshotMeta()
+	}
+	if got := idx.SnapshotMeta().StaleInvalidations; got != 2 {
+		t.Fatalf("expected 2 stale transitions, got %d", got)
+	}
+}
+
+func TestIndex_SameSeqDuplicateStoreIdempotent(t *testing.T) {
+	clk := newClock(time.Unix(1000, 0))
+	idx := newTestIndex(clk, IndexConfig{MaxEntries: 100, EntryTTL: time.Hour, StaleAfter: time.Hour})
+	idx.ApplyStore(3, "k", "", 16, 16)
+	idx.ApplyStore(3, "k", "", 16, 16) // exact duplicate (same key+seq)
+	s := idx.SnapshotMeta()
+	if s.DuplicateEventsTotal != 1 {
+		t.Fatalf("expected 1 duplicate, got %d", s.DuplicateEventsTotal)
+	}
+	if s.IndexEntries != 1 {
+		t.Fatalf("expected 1 entry, got %d", s.IndexEntries)
+	}
+}

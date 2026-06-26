@@ -108,7 +108,16 @@ type Snapshot struct {
 	DuplicateEventsTotal  uint64    `json:"duplicate_events_total"`
 	OutOfOrderEventsTotal uint64    `json:"out_of_order_events_total"`
 	ResetsTotal           uint64    `json:"resets_total"`
-	UpdatedAt             time.Time `json:"updated_at"`
+	// residency state-machine counters (explicit provider). A WARMING prefix is NOT a reusable hit.
+	ResidencyReady   int    `json:"residency_ready"`
+	ResidencyWarming int    `json:"residency_warming"`
+	ResidencyTotal   int    `json:"residency_total"`
+	FalseReadyTotal  uint64 `json:"false_ready_total"`
+	// sequence-health trust state (native provider). When false, confidence is 0 and no matchable
+	// directory is published (unresolved gap / inconsistency).
+	SequenceHealthy bool   `json:"sequence_healthy"`
+	UnresolvedGap   bool   `json:"unresolved_gap"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // IndexEntry is one prefix/block entry — METADATA ONLY. No raw token ids are ever stored here.

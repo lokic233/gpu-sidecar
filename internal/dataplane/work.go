@@ -5,118 +5,159 @@ import (
 	"sync/atomic"
 )
 
-// WorkAccountant tracks OPTIONAL cache-aware work accounting alongside the hard request-count and
-// inflight bounds in Queue. It does NOT gate admission by itself (the queue's MaxQueuedRequests /
-// MaxInflightRequests remain the hard safety bounds). It exposes token-level reservations so the
-// sidecar and router can reason about prefill/decode pressure beyond raw request counts.
+// WorkAccountant tracks OPTIONAL token-level work accounting alongside the hard request-count and
+// inflight bounds in Queue (which remain the safety bounds; this is ADVISORY in this task). It is
+// correct-by-construction: a reservation is created ONCE at queue admission, moved queued->active at
+// dispatch, and released ONCE at the terminal path. The reservation is carried on the request
+// ticket, never recomputed.
 //
-// Conservative reservation rule (NEVER trust cache affinity fully for safety):
-//   - high cache confidence  -> reserve based on UNCACHED prompt tokens
-//   - low / stale confidence -> reserve based on FULL prompt tokens (assume nothing is cached)
+// Conservative reservation rule (NEVER trust cache affinity for safety):
+//   READY match (trustworthy)            -> reserve UNCACHED prompt tokens
+//   ABSENT / WARMING / unknown / stale   -> reserve FULL prompt tokens
 //
-// All counters are token counts. Reserved* are in-flight-or-queued reservations; Active* are the
-// subset currently dispatched (between dispatch and completion). They are released on completion.
+// Invariants (enforced + tested): queued>=0, active>=0, outstanding>=0,
+// outstanding == queued+active, and all return to 0 after every request terminates.
 type WorkAccountant struct {
 	mu sync.Mutex
 
-	reservedUncachedPrefill int64
-	reservedDecode          int64
-	activeUncachedPrefill   int64
-	activeDecode            int64
+	queuedPrefill int64
+	queuedDecode  int64
+	activePrefill int64
+	activeDecode  int64
 
-	// monotonic totals for observability
 	totalReservedPrefill atomic.Int64
 	totalReservedDecode  atomic.Int64
 }
 
-// NewWorkAccountant builds an empty accountant.
 func NewWorkAccountant() *WorkAccountant { return &WorkAccountant{} }
 
-// ConfidenceThreshold above which we treat cache locality as trustworthy for reservation sizing.
-const WorkConfidenceThreshold = 0.30
+// Reservation is the per-ticket handle. It records the exact token amounts booked so the SAME
+// amounts are moved/released — never recomputed. Use-once: Activate then Release, or Release directly
+// (if it never dispatched). Release is idempotent.
+type Reservation struct {
+	w        *WorkAccountant
+	prefill  int
+	decode   int
+	active   bool
+	released bool
+	mu       sync.Mutex
+}
 
-// ReserveTokens computes and records a reservation for a request. matchedPrefixTokens/confidence are
-// the cache-locality inputs; inputTokens/expectedOutput are request shape. Returns the reserved
-// uncached-prefill and decode token counts actually booked (for the trajectory/queue snapshot).
-func (w *WorkAccountant) ReserveTokens(inputTokens, matchedPrefixTokens, expectedOutput int, confidence float64) (uncachedPrefill, decode int) {
+// Reserve books a queued reservation at ADMISSION time. matchedReadyTokens is the trustworthy READY
+// prefix length (0 unless the cache is READY with high confidence); inputTokens/expectedOutput are
+// request shape. Returns a Reservation carried on the ticket.
+func (w *WorkAccountant) Reserve(inputTokens, matchedReadyTokens, expectedOutput int, readyTrust bool) *Reservation {
 	if inputTokens < 0 {
 		inputTokens = 0
 	}
 	if expectedOutput < 0 {
 		expectedOutput = 0
 	}
-	// Conservative: only subtract the cached prefix when confidence is high enough.
 	matched := 0
-	if confidence >= WorkConfidenceThreshold {
-		matched = matchedPrefixTokens
+	if readyTrust {
+		matched = matchedReadyTokens
 		if matched > inputTokens {
 			matched = inputTokens
 		}
 	}
-	uncachedPrefill = inputTokens - matched
-	if uncachedPrefill < 0 {
-		uncachedPrefill = 0
+	prefill := inputTokens - matched
+	if prefill < 0 {
+		prefill = 0
 	}
-	decode = expectedOutput
+	decode := expectedOutput
 	w.mu.Lock()
-	w.reservedUncachedPrefill += int64(uncachedPrefill)
-	w.reservedDecode += int64(decode)
+	w.queuedPrefill += int64(prefill)
+	w.queuedDecode += int64(decode)
 	w.mu.Unlock()
-	w.totalReservedPrefill.Add(int64(uncachedPrefill))
+	w.totalReservedPrefill.Add(int64(prefill))
 	w.totalReservedDecode.Add(int64(decode))
-	return uncachedPrefill, decode
+	return &Reservation{w: w, prefill: prefill, decode: decode}
 }
 
-// Activate moves a reservation from reserved->active (called at dispatch).
-func (w *WorkAccountant) Activate(uncachedPrefill, decode int) {
-	w.mu.Lock()
-	w.activeUncachedPrefill += int64(uncachedPrefill)
-	w.activeDecode += int64(decode)
-	w.mu.Unlock()
+// Activate moves a reservation queued->active (called at dispatch). Idempotent; no-op after release.
+func (r *Reservation) Activate() {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.released || r.active {
+		return
+	}
+	r.active = true
+	r.w.mu.Lock()
+	r.w.queuedPrefill -= int64(r.prefill)
+	r.w.queuedDecode -= int64(r.decode)
+	r.w.activePrefill += int64(r.prefill)
+	r.w.activeDecode += int64(r.decode)
+	r.w.clampLocked()
+	r.w.mu.Unlock()
 }
 
-// Release frees a reservation (called at completion/failure/cancel). Clamps at zero.
-func (w *WorkAccountant) Release(uncachedPrefill, decode int) {
-	w.mu.Lock()
-	w.reservedUncachedPrefill -= int64(uncachedPrefill)
-	w.reservedDecode -= int64(decode)
-	w.activeUncachedPrefill -= int64(uncachedPrefill)
-	w.activeDecode -= int64(decode)
-	if w.reservedUncachedPrefill < 0 {
-		w.reservedUncachedPrefill = 0
+// Release frees the reservation from whichever bucket it currently sits in (queued OR active).
+// Idempotent: a second Release is a no-op. Called on EVERY terminal path.
+func (r *Reservation) Release() {
+	if r == nil {
+		return
 	}
-	if w.reservedDecode < 0 {
-		w.reservedDecode = 0
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.released {
+		return
 	}
-	if w.activeUncachedPrefill < 0 {
-		w.activeUncachedPrefill = 0
+	r.released = true
+	r.w.mu.Lock()
+	if r.active {
+		r.w.activePrefill -= int64(r.prefill)
+		r.w.activeDecode -= int64(r.decode)
+	} else {
+		r.w.queuedPrefill -= int64(r.prefill)
+		r.w.queuedDecode -= int64(r.decode)
+	}
+	r.w.clampLocked()
+	r.w.mu.Unlock()
+}
+
+// clampLocked guards against transient negatives (defense-in-depth; invariants assert >=0).
+func (w *WorkAccountant) clampLocked() {
+	if w.queuedPrefill < 0 {
+		w.queuedPrefill = 0
+	}
+	if w.queuedDecode < 0 {
+		w.queuedDecode = 0
+	}
+	if w.activePrefill < 0 {
+		w.activePrefill = 0
 	}
 	if w.activeDecode < 0 {
 		w.activeDecode = 0
 	}
-	w.mu.Unlock()
 }
 
 // WorkSnapshot is the token-level work-accounting view (exposed via /v1/queue when enabled).
 type WorkSnapshot struct {
-	ReservedUncachedPrefillTokens int64 `json:"reserved_uncached_prefill_tokens"`
-	ReservedDecodeTokens          int64 `json:"reserved_decode_tokens"`
-	ActiveUncachedPrefillTokens   int64 `json:"active_uncached_prefill_work"`
-	ActiveDecodeTokens            int64 `json:"active_decode_work"`
-	TotalReservedPrefillTokens    int64 `json:"reserved_prefill_tokens_total"`
-	TotalReservedDecodeTokens     int64 `json:"reserved_decode_tokens_total"`
+	QueuedReservedPrefillTokens int64 `json:"queued_reserved_prefill_tokens"`
+	QueuedReservedDecodeTokens  int64 `json:"queued_reserved_decode_tokens"`
+	ActivePrefillTokens         int64 `json:"active_prefill_tokens"`
+	ActiveDecodeTokens          int64 `json:"active_decode_tokens"`
+	TotalOutstandingPrefill     int64 `json:"total_outstanding_prefill_tokens"`
+	TotalOutstandingDecode      int64 `json:"total_outstanding_decode_tokens"`
+	LifetimeReservedPrefill     int64 `json:"lifetime_reserved_prefill_tokens"`
+	LifetimeReservedDecode      int64 `json:"lifetime_reserved_decode_tokens"`
 }
 
-// Snapshot returns the current work-accounting counters.
+// Snapshot returns the current counters. outstanding = queued + active (by construction).
 func (w *WorkAccountant) Snapshot() WorkSnapshot {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return WorkSnapshot{
-		ReservedUncachedPrefillTokens: w.reservedUncachedPrefill,
-		ReservedDecodeTokens:          w.reservedDecode,
-		ActiveUncachedPrefillTokens:   w.activeUncachedPrefill,
-		ActiveDecodeTokens:            w.activeDecode,
-		TotalReservedPrefillTokens:    w.totalReservedPrefill.Load(),
-		TotalReservedDecodeTokens:     w.totalReservedDecode.Load(),
+		QueuedReservedPrefillTokens: w.queuedPrefill,
+		QueuedReservedDecodeTokens:  w.queuedDecode,
+		ActivePrefillTokens:         w.activePrefill,
+		ActiveDecodeTokens:          w.activeDecode,
+		TotalOutstandingPrefill:     w.queuedPrefill + w.activePrefill,
+		TotalOutstandingDecode:      w.queuedDecode + w.activeDecode,
+		LifetimeReservedPrefill:     w.totalReservedPrefill.Load(),
+		LifetimeReservedDecode:      w.totalReservedDecode.Load(),
 	}
 }

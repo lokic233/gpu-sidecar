@@ -1,5 +1,29 @@
 # Results — Cache-Aware Sidecar E2E Validation
 
+> ⚠️ **SUPERSEDED IN PART by Round-5.1 hardening — read this first.**
+>
+> This document is the Round-5 (initial) results. A subsequent correctness-hardening pass
+> (`artifacts/cache_aware_sidecar_hardening/`) found that **§5 "equal-capability comparison" below ran
+> two sidecars over ONE shared vLLM runtime** (one KV cache / one scheduler) — that is NOT a valid
+> two-replica cache-routing experiment, and its herding/balancing numbers are artifacts of two
+> independent SYNTHETIC directories over one runtime. The corrected experiment uses **two genuinely
+> independent vLLM replicas** (separate process/GPU/port/KV/scheduler) with a HARD-STOP guard; see
+> `artifacts/cache_aware_sidecar_hardening/results.md` + `independent_replica_proof.md`.
+>
+> Also superseded: the residency, work-accounting, atomic-snapshot, and service-profile semantics
+> described here were hardened (see `cache_aware_sidecar_hardening/correctness_design.md`). Historical
+> labels for the runs below:
+> - **Historical run:** H100 real vLLM + (cross-vendor) MI350X **mini HF compatibility server** — NOT
+>   a clean hardware comparison; and the equal-capability run = two sidecars over one runtime.
+> - **Current run:** H100 real vLLM (two independent replicas) + MI350X **real ROCm vLLM** — see the
+>   hardening results.
+>
+> The contract/observability findings below remain valid. The ROUTING-BEHAVIOR demonstration should be
+> read from the hardening results, not §5 here.
+
+---
+
+
 All numbers below are from LIVE runs on real hardware on 2026-06-25:
 - H100 `devgpu014`: real vLLM 0.23.0 (Qwen2.5-0.5B-Instruct).
 - MI350X `devgpu499`: `mini_oai_server.py` (HF transformers), same model.

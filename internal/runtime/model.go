@@ -48,6 +48,11 @@ type RuntimeMetrics struct {
 	// Identity / provenance.
 	ModelName      string   `json:"model_name"`
 	RuntimeVersion string   `json:"runtime_version"`
+	// RuntimeInstanceID is a best-effort UNIQUE fingerprint of the upstream runtime PROCESS, derived
+	// from the runtime's process_start_time_seconds metric. Two sidecars pointing at the SAME vLLM
+	// process report the SAME value — used to refuse invalid "two replicas over one runtime"
+	// experiments. 0 when the runtime does not expose it.
+	RuntimeInstanceID float64 `json:"runtime_instance_id"`
 	// RawMetricSources maps each normalized field to the raw Prometheus metric name it came from,
 	// so a consumer can audit the mapping. Unmapped normalized fields are absent here.
 	RawMetricSources map[string]string `json:"raw_metric_sources"`
