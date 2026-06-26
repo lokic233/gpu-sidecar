@@ -1,0 +1,50 @@
+{
+  "date": "2026-06-26",
+  "git_commit": "f642770",
+  "policy": "cache_aware_estimated_finish",
+  "backends": [
+    {
+      "id": "h100",
+      "gpu": "NVIDIA H100 GPU6",
+      "runtime": "vLLM 0.23.0",
+      "port": 8006,
+      "endpoint_id": "08d83fb2e885",
+      "profile": {
+        "decode_ms_per_token": 0.3,
+        "prefill_ms_per_token": 0.03
+      }
+    },
+    {
+      "id": "mi350x",
+      "gpu": "AMD MI350X gfx950",
+      "runtime": "real ROCm vLLM 0.21.1",
+      "port": 8001,
+      "endpoint_id": "af808b9554bf",
+      "profile": {
+        "decode_ms_per_token": 1.5,
+        "prefill_ms_per_token": 0.15
+      }
+    }
+  ],
+  "independent_replicas": true,
+  "cache_observer": "explicit",
+  "locality": "synthetic (explicit-prefix, real shared prompt prefix)",
+  "workload": "48 requests, 50% hot shared prefix / 50% unique, concurrency 8",
+  "result": {
+    "total_assignment": {
+      "h100": 40,
+      "mi350x": 8
+    },
+    "hot_prefix_assignment": {
+      "h100": 20,
+      "mi350x": 4
+    },
+    "throughput_rps": 14.3
+  },
+  "interpretation": [
+    "Strong hardware concentration on H100 is ALLOWED and occurs (40 vs 8) because its configured profile is genuinely ~5x faster \u2014 this is optimal, not a fairness violation.",
+    "Concentration is NOT 100%: MI350X still receives 8 requests when H100's live queue/congestion term grows \u2014 heterogeneous profiles respected, no herding.",
+    "NO artificial utilization-fairness reward: traffic is NOT split evenly by construction.",
+    "Both runtimes are REAL vLLM (H100 0.23 + MI350X ROCm 0.21) \u2014 NOT a real-vLLM-vs-mini-HF comparison."
+  ]
+}

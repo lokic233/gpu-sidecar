@@ -1,18 +1,33 @@
 # GPU Host Sidecar (cross-vendor: NVIDIA H100 + AMD MI350X)
 
+> **Round 5.1 — correctness hardening.** A hostile-reviewer pass over the cache-aware sidecar. Fixed
+> 5 correctness gaps (all behind the existing flags; cache still OFF by default):
+> (1) the equal-capability experiment now requires **two genuinely independent vLLM replicas** and
+> HARD-STOPs if backends share a runtime — validated on two H100 GPUs (separate process/port/KV/
+> scheduler); (2) prefix locality now follows a conservative **residency state machine**
+> (ABSENT→WARMING→READY) — a WARMING prefix is never a reusable hit, and a request that fails/cancels
+> before its first token leaves no false-positive cache entry; (3) token **work accounting** reserves
+> at queue admission, moves queued→active at dispatch, and releases once on every terminal path
+> (`outstanding = queued + active`, never negative); (4) the router reads **one atomic snapshot**
+> (backend state + cache directory share a generation — no cross-generation mix); (5) decode cost
+> comes from a static **per-backend service profile**, never live aggregate throughput (kills the
+> busy→"faster"→busier feedback loop). Plus per-entry event ordering, an unresolved-gap trust state,
+> and once-per-transition stale counting. **207 tests, `go test -race ./...` green.** Authoritative:
+> `artifacts/cache_aware_sidecar_hardening/` (`implementation_report.md`, `pre_change_audit.md`).
+>
+> **Honest claim:** the cache-aware routing **contract** + the **explicit-prefix controlled
+> experiment** are validated on independent replicas; **native KV-event ingestion** is validated on
+> real vLLM on **both** H100 (0.23) and MI350X (ROCm 0.21, identical schema); **native per-request
+> KV-block matching remains unsupported** (it needs raw token IDs + version-specific block hashing),
+> so `vllm_events` stays metadata-only and routing falls back safely to the load-only estimate.
+
 > **Round 5 — cache-aware admission sidecar.** The sidecar now also exposes **cache-locality** state
 > so a global router can route on *prefix reuse + capacity*, not just load. Added a pluggable
 > cache-observation plane (`internal/cache`: bounded thread-safe prefix index +
 > `disabled|explicit|vllm_events` providers), a cache-aware analytical routing baseline
 > (`cache_aware_estimated_finish`, documented coefficients, no magic constants), `GET /v1/cache` +
 > bounded `gpu_cache_*` metrics, optional token-level work accounting, and full per-candidate RL state
-> emission. **Validated E2E on real vLLM on BOTH H100 (vLLM 0.23) and MI350X (vLLM 0.21.1, ROCm 7.0).**
-> Native vLLM KV events were captured live on **both** vendors with an **identical schema**; per-request
-> native block matching remains the one documented blocker (it needs raw token IDs + vLLM-internal
-> hashing), so `vllm_events` is metadata-only and the **validated routing path is the deterministic
-> explicit-prefix provider + safe load-only fallback.** All cache features default **OFF**. 178 tests,
-> race-clean. See `README.md` §"Cache-aware quickstart" + `artifacts/cache_aware_sidecar/`
-> (`implementation_report.md`, `vllm_cache_observability_audit.md`).
+> emission. See `artifacts/cache_aware_sidecar/`.
 
 > **Round 4 — end-to-end vLLM flow.** Added a Global Router Gateway (`cmd/router`), a local data
 > plane in the sidecar (`-data-plane`: bounded admission queue + OpenAI proxy + transparent SSE relay
@@ -192,7 +207,9 @@ map lookup** for the current request's prefix key. Per-backend materialized stat
 | **reachability/health** | `reachable`, `runtime_healthy`, `lifecycle_state`, `control_plane_ready`, `stability_score`, `host_capacity_hint`, `snapshot_age_ms` | `/readyz`, `/v1/status` |
 | **admission queue** (host) | `queue_depth`, `queue_inflight`, `queue_max` | `/v1/queue` |
 | **vLLM runtime** (distinct queue) | `runtime_waiting`, `runtime_running`, `kv_cache_util` | `/v1/runtime` |
-| **service rate** | `gen_tokens_per_sec`, `service_rate_supported` — a **delta** of the cumulative `generation_tokens_total` counter over wall time (never the raw total) | `/v1/runtime` (differenced) |
+| **service rate (TELEMETRY only)** | `gen_tokens_per_sec`, `service_rate_supported` — a **delta** of the cumulative `generation_tokens_total` counter (never the raw total). **Not used as per-request decode speed** (would cause busy→"faster"→busier herding). | `/v1/runtime` (differenced) |
+| **service profile** | static `decode_ms_per_token` / `prefill_ms_per_token` per backend (router `--profiles`); global fallback when absent (`profile_fallback` flagged) | router config |
+| **runtime identity** | `runtime_endpoint_id` (host+vllm-url+boot hash), `runtime_instance_id` — distinguishes independent runtimes; refuses two-sidecars-over-one-vLLM experiments | `/v1/runtime` |
 | **cache locality** | `cache_observation_supported`, `cache_match_supported`, `cache_ready`, `cache_confidence`, `cache_snapshot_age_ms`, `cache_event_sequence`, `cache_reset_epoch`, `cache_index_size`, `cache_provider`, `kv_headroom`, `kv_headroom_supported` | `/v1/cache` |
 | **per-request match** | matched prefix tokens for *this* request's `X-Cache-Prefix-Key` | router-local cache directory (O(1)) |
 
@@ -201,7 +218,7 @@ estimate (lower wins; ties broken by backend id so the chosen logical backend is
 ```
 estimated_finish_ms = est_queue_ms
                     + est_prefill_ms(uncached_prompt_tokens)   # uncached = input − matched_prefix
-                    + est_decode_ms(expected_output)           # uses measured service rate when reliable
+                    + est_decode_ms(expected_output)           # uses STATIC per-backend profile (not live aggregate throughput)
                     + cache_staleness_penalty_ms               # ×(1−confidence) when plane supported
                     + kv_pressure_penalty_ms                   # ×(1−kv_headroom) when measurable
 ```

@@ -1,5 +1,10 @@
 # Experiment Protocol
 
+> ⚠️ **See `artifacts/cache_aware_sidecar_hardening/` for the Round-5.1 correctness-hardening pass**, which corrected the equal-capability experiment (independent replicas + HARD-STOP guard), the residency state machine, work-accounting lifecycle, atomic routing snapshot, and the service-profile/throughput split. Native per-request KV-block matching remains unsupported.
+
+---
+
+
 Reproducible controlled-workload protocol for the cache-aware routing comparison (task §10).
 
 ## Stack under test (live E2E, 2026-06-25)
