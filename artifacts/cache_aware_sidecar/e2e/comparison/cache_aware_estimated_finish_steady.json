@@ -1,0 +1,16 @@
+{
+  "policy": "cache_aware_estimated_finish",
+  "arrival": "steady",
+  "total": 120,
+  "ok": 120,
+  "failed": 0,
+  "throughput_rps": 24.18,
+  "wall_s": 4.96,
+  "ttft_p50_ms": 144.4,
+  "ttft_p95_ms": 1212.8,
+  "e2e_p50_ms": 144.4,
+  "e2e_p95_ms": 1212.8,
+  "assignment": {
+    "h100-gpu3": 120
+  }
+}

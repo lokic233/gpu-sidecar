@@ -1,0 +1,16 @@
+{
+  "policy": "round_robin",
+  "arrival": "steady",
+  "total": 120,
+  "ok": 120,
+  "failed": 0,
+  "throughput_rps": 26.3,
+  "wall_s": 4.56,
+  "ttft_p50_ms": 171.8,
+  "ttft_p95_ms": 1062.2,
+  "e2e_p50_ms": 171.8,
+  "e2e_p95_ms": 1062.2,
+  "assignment": {
+    "h100-gpu3": 120
+  }
+}

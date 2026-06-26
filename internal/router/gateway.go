@@ -153,6 +153,15 @@ func (g *Gateway) forward(w http.ResponseWriter, r *http.Request, bs *BackendSta
 	req.Header.Set("X-Request-ID", reqID)
 	req.Header.Set("X-Route-ID", routeID)
 	req.Header.Set("X-Backend-ID", bs.Backend.ID)
+	// Propagate the opaque experiment prefix headers to the sidecar so it can observe locality. The
+	// sidecar STRIPS these before forwarding to vLLM (they never reach the model server). The raw key
+	// is opaque experiment metadata, not prompt content.
+	if v := r.Header.Get("X-Cache-Prefix-Key"); v != "" {
+		req.Header.Set("X-Cache-Prefix-Key", v)
+	}
+	if v := r.Header.Get("X-Cache-Prefix-Tokens"); v != "" {
+		req.Header.Set("X-Cache-Prefix-Tokens", v)
+	}
 
 	resp, err := g.client.Do(req)
 	if err != nil {

@@ -1,0 +1,16 @@
+{
+  "policy": "health_gated_least_pressure",
+  "arrival": "steady",
+  "total": 120,
+  "ok": 120,
+  "failed": 0,
+  "throughput_rps": 19.78,
+  "wall_s": 6.07,
+  "ttft_p50_ms": 192.7,
+  "ttft_p95_ms": 1360.4,
+  "e2e_p50_ms": 192.7,
+  "e2e_p95_ms": 1360.4,
+  "assignment": {
+    "h100-gpu3": 120
+  }
+}

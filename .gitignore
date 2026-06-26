@@ -3,3 +3,4 @@
 __pycache__/
 *.pyc
 /tmp/
+/artifacts/cache_aware_sidecar/e2e/h100/trajectories.jsonl
