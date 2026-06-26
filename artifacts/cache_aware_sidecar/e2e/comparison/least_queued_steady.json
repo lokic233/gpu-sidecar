@@ -1,0 +1,16 @@
+{
+  "policy": "least_queued",
+  "arrival": "steady",
+  "total": 120,
+  "ok": 120,
+  "failed": 0,
+  "throughput_rps": 29.55,
+  "wall_s": 4.06,
+  "ttft_p50_ms": 132.8,
+  "ttft_p95_ms": 956.7,
+  "e2e_p50_ms": 132.8,
+  "e2e_p95_ms": 956.7,
+  "assignment": {
+    "h100-gpu3": 120
+  }
+}

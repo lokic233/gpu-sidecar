@@ -4,10 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -67,16 +70,29 @@ func (g *Gateway) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	stream := detectStream(body)
+	prefixKeyHash, prefixTokens, sessionKeyHash := extractPrefixFeatures(r)
 	feat := RequestFeatures{
 		RequestID: reqID, Model: extractModel(body), Stream: stream,
 		InputLenEst: estimateTokens(body), RequestedOutput: extractMaxTokens(body),
-		SLOClass: r.Header.Get("X-SLO-Class"),
+		SLOClass:       r.Header.Get("X-SLO-Class"),
+		PrefixKeyHash:  prefixKeyHash,
+		PrefixTokens:   prefixTokens,
+		CacheEligible:  prefixKeyHash != "",
+		SessionKeyHash: sessionKeyHash,
 	}
-	g.emit("REQUEST_RECEIVED", reqID, "", "", map[string]any{"stream": stream, "model": feat.Model, "input_len_est": feat.InputLenEst})
+	recvFields := map[string]any{"stream": stream, "model": feat.Model, "input_len_est": feat.InputLenEst}
+	if feat.CacheEligible {
+		recvFields["cache_eligible"] = true
+		recvFields["prefix_key_hash"] = prefixKeyHash // hashed; never the raw key
+		recvFields["prefix_tokens"] = prefixTokens
+	}
+	g.emit("REQUEST_RECEIVED", reqID, "", "", recvFields)
 
 	snap := g.reg.Snapshot()
 	g.emit("BACKEND_SNAPSHOT_READ", reqID, "", "", map[string]any{
 		"snapshot_age_ms": ms(time.Since(snap.Timestamp)), "n_backends": len(snap.Backends)})
+	// Emit the full per-candidate analytical RL state (every routing decision can be reconstructed).
+	g.emitCandidateState(reqID, feat, snap)
 
 	// Attempt loop: pre-first-token retry across backends (bounded).
 	triedFirstByte := false
@@ -137,6 +153,15 @@ func (g *Gateway) forward(w http.ResponseWriter, r *http.Request, bs *BackendSta
 	req.Header.Set("X-Request-ID", reqID)
 	req.Header.Set("X-Route-ID", routeID)
 	req.Header.Set("X-Backend-ID", bs.Backend.ID)
+	// Propagate the opaque experiment prefix headers to the sidecar so it can observe locality. The
+	// sidecar STRIPS these before forwarding to vLLM (they never reach the model server). The raw key
+	// is opaque experiment metadata, not prompt content.
+	if v := r.Header.Get("X-Cache-Prefix-Key"); v != "" {
+		req.Header.Set("X-Cache-Prefix-Key", v)
+	}
+	if v := r.Header.Get("X-Cache-Prefix-Tokens"); v != "" {
+		req.Header.Set("X-Cache-Prefix-Tokens", v)
+	}
 
 	resp, err := g.client.Do(req)
 	if err != nil {
@@ -300,3 +325,106 @@ func httpErr(w http.ResponseWriter, status int, code, reqID, detail string) {
 }
 
 var _ = context.Background
+
+// emitCandidateState emits the full per-candidate analytical observation Liangqi's PPO needs to
+// reconstruct any routing decision. For EVERY candidate backend it records the load/runtime/cache
+// state AND the analytical cost breakdown (the base score over which PPO learns a residual). It
+// computes scores via the cache-aware policy regardless of the active policy, so the RL state is
+// always present even when routing with a baseline. No content, no raw keys.
+func (g *Gateway) emitCandidateState(reqID string, feat RequestFeatures, snap *BackendSnapshot) {
+	// Use the cache-aware analytical policy as the canonical base-score generator for RL state.
+	scorer := NewCacheAwarePolicy(DefaultCacheAwareConfig(), g.reg)
+	scores := scorer.ScoreBreakdown(feat, snap)
+	byID := map[string]CandidateScore{}
+	for _, s := range scores {
+		byID[s.BackendID] = s
+	}
+	for i := range snap.Backends {
+		b := &snap.Backends[i]
+		cs, hasScore := byID[b.Backend.ID]
+		fields := map[string]any{
+			// load / runtime
+			"queue_depth":      b.QueueDepth,
+			"queue_inflight":   b.QueueInflight,
+			"queue_max":        b.QueueMax,
+			"runtime_running":  b.RuntimeRunning,
+			"runtime_waiting":  b.RuntimeWaiting,
+			"kv_cache_util":    b.KVCacheUtil,
+			"kv_headroom":      b.KVHeadroom,
+			"kv_headroom_supported": b.KVHeadroomSupported,
+			"lifecycle_state":  b.LifecycleState,
+			"stability_score":  b.StabilityScore,
+			"snapshot_age_ms":  b.SnapshotAgeMs,
+			// service rate (delta-derived, NOT cumulative total)
+			"gen_tokens_per_sec":     b.GenTokensPerSec,
+			"service_rate_supported": b.ServiceRateSupported,
+			// cache observation
+			"cache_observation_supported": b.CacheObservationSupported,
+			"cache_match_supported":       b.CacheMatchSupported,
+			"cache_confidence":            b.CacheConfidence,
+			"cache_ready":                 b.CacheReady,
+			"cache_snapshot_age_ms":       b.CacheSnapshotAgeMs,
+			"cache_event_sequence":        b.CacheEventSequence,
+			"cache_reset_epoch":           b.CacheResetEpoch,
+			"cache_index_size":            b.CacheIndexSize,
+			"eligible":                    isEligible(b),
+		}
+		if hasScore {
+			fields["matched_prefix_tokens"] = cs.MatchedPrefixTokens
+			fields["match_ratio"] = cs.MatchRatio
+			fields["uncached_prompt_tokens"] = cs.UncachedPromptTokens
+			fields["estimated_prefill_saved_ms"] = cs.EstPrefillSavedMs
+			fields["est_queue_ms"] = cs.EstQueueMs
+			fields["est_prefill_ms"] = cs.EstPrefillMs
+			fields["est_decode_ms"] = cs.EstDecodeMs
+			fields["cache_staleness_penalty_ms"] = cs.StalenessPenaltyMs
+			fields["kv_pressure_penalty_ms"] = cs.KVPenaltyMs
+			fields["final_analytical_score_ms"] = cs.FinalScoreMs
+			fields["cache_used"] = cs.CacheUsed
+		}
+		g.emit("CANDIDATE_STATE", reqID, "", b.Backend.ID, fields)
+	}
+}
+
+// isEligible mirrors the eligibility predicate for a single backend (for RL state honesty).
+func isEligible(b *BackendState) bool {
+	if !b.Reachable || !b.RuntimeHealthy {
+		return false
+	}
+	if b.LifecycleState == "OFFLINE" || b.LifecycleState == "DRAINING" {
+		return false
+	}
+	if b.QueueMax > 0 && b.QueueDepth >= b.QueueMax {
+		return false
+	}
+	return true
+}
+
+// extractPrefixFeatures reads the opaque experiment prefix headers at the router and returns HASHED
+// values (never raw). Router-side hashing matches the sidecar's (same SHA-256) so the directory key
+// space agrees. The router does NOT strip these (the sidecar strips before forwarding to vLLM).
+func extractPrefixFeatures(r *http.Request) (prefixKeyHash string, prefixTokens int, sessionKeyHash string) {
+	if k := r.Header.Get("X-Cache-Prefix-Key"); k != "" {
+		prefixKeyHash = hashRouterKey(k)
+	}
+	if t := r.Header.Get("X-Cache-Prefix-Tokens"); t != "" {
+		if n, err := strconv.Atoi(t); err == nil && n > 0 {
+			if n > 1<<20 {
+				n = 1 << 20
+			}
+			prefixTokens = n
+		}
+	}
+	if s := r.Header.Get("X-Session-Key"); s != "" {
+		sessionKeyHash = hashRouterKey(s)
+	}
+	return
+}
+
+func hashRouterKey(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}

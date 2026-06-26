@@ -53,7 +53,7 @@ func main() {
 	emitter.Start()
 	defer emitter.Stop()
 
-	gw := router.NewGateway(reg, router.PolicyByName(policyName), emitter, maxRetries)
+	gw := router.NewGateway(reg, router.PolicyByNameWithLocator(policyName, reg), emitter, maxRetries)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/chat/completions", gw.ChatCompletions)

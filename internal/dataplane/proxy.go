@@ -2,10 +2,12 @@ package dataplane
 
 import (
 	"bufio"
-	"errors"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,16 +20,34 @@ import (
 
 // ProxyConfig configures the sidecar OpenAI-compatible proxy + relay.
 type ProxyConfig struct {
-	HostID            string
-	BackendID         string
-	DeviceID          string
-	MaxBufferBytes    int           // bounded per-request buffer for backpressure
+	HostID             string
+	BackendID          string
+	DeviceID           string
+	MaxBufferBytes     int     // bounded per-request buffer for backpressure
 	SlowConsumerWarnMs float64
-	LogContent        bool          // MUST default false: never log prompts/responses
+	LogContent         bool // MUST default false: never log prompts/responses
+
+	// --- cache-aware experimental knobs (default off) ---
+	// ExplicitHeaderEnabled enables reading X-Cache-Prefix-Key / X-Cache-Prefix-Tokens for the
+	// deterministic explicit-prefix experiment mode. Disabled by default. When disabled the headers
+	// are ignored AND still stripped before forwarding to vLLM.
+	ExplicitHeaderEnabled bool
+	// MaxPrefixTokens bounds the accepted X-Cache-Prefix-Tokens value (sanitization).
+	MaxPrefixTokens int
 }
 
 func DefaultProxyConfig() ProxyConfig {
-	return ProxyConfig{MaxBufferBytes: 1 << 20, SlowConsumerWarnMs: 250, LogContent: false}
+	return ProxyConfig{MaxBufferBytes: 1 << 20, SlowConsumerWarnMs: 250, LogContent: false,
+		MaxPrefixTokens: 1 << 20}
+}
+
+// CacheObserver is the minimal sidecar-side hook the proxy uses to record/observe prefix locality.
+// Implemented by the explicit cache provider; nil for non-cache sidecars. The proxy passes only a
+// HASHED key — never the raw header value.
+type CacheObserver interface {
+	// Observe records that this backend has now served (cached) the given hashed prefix key for the
+	// given token count, so the next request for the same key sees a warm cache.
+	Observe(keyHash string, tokens int)
 }
 
 // Gate decides whether the backend currently admits requests. Returns nil to admit.
@@ -52,11 +72,19 @@ type LocalEvent struct {
 
 // Proxy is the sidecar local data-plane HTTP handler.
 type Proxy struct {
-	cfg    ProxyConfig
-	queue  *Queue
-	vllm   *vllm.Adapter
-	gate   Gate
-	sink   EventSink
+	cfg   ProxyConfig
+	queue *Queue
+	vllm  *vllm.Adapter
+	gate  Gate
+	sink  EventSink
+
+	// cacheObs records explicit-prefix locality (nil when cache observation is off). Used only to
+	// observe — never to gate or to store content.
+	cacheObs CacheObserver
+
+	// work optionally tracks token-level prefill/decode reservations (nil when off). Additive to the
+	// hard request-count/inflight bounds; never replaces them.
+	work *WorkAccountant
 
 	// per-request bounded context counters (no full body retained)
 	reqSeq atomic.Uint64
@@ -65,6 +93,12 @@ type Proxy struct {
 func NewProxy(cfg ProxyConfig, q *Queue, v *vllm.Adapter, gate Gate, sink EventSink) *Proxy {
 	return &Proxy{cfg: cfg, queue: q, vllm: v, gate: gate, sink: sink}
 }
+
+// SetCacheObserver attaches the explicit-prefix cache observer (experimental mode). Safe to leave nil.
+func (p *Proxy) SetCacheObserver(o CacheObserver) { p.cacheObs = o }
+
+// SetWorkAccountant attaches the optional token-level work accountant. Safe to leave nil.
+func (p *Proxy) SetWorkAccountant(w *WorkAccountant) { p.work = w }
 
 func (p *Proxy) emit(kind, reqID, routeID string, fields map[string]any) {
 	if p.sink == nil {
@@ -88,6 +122,10 @@ func (p *Proxy) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 	reqID := orGenerate(r.Header.Get("X-Request-ID"), "req")
 	routeID := orGenerate(r.Header.Get("X-Route-ID"), "rt")
 
+	// Explicit-prefix experiment headers: read+HASH+STRIP. Disabled by default. The raw key is NEVER
+	// logged, stored, or forwarded to vLLM. When disabled, headers are still stripped for hygiene.
+	prefixKeyHash, prefixTokens := p.extractAndStripPrefixHeaders(r)
+
 	body, err := io.ReadAll(io.LimitReader(r.Body, 16*1024*1024))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "READ_BODY_FAILED", reqID, err.Error())
@@ -96,10 +134,17 @@ func (p *Proxy) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 	// detect stream flag without full re-serialize
 	stream := detectStream(body)
 
-	p.emit("LOCAL_REQUEST_RECEIVED", reqID, routeID, map[string]any{
-		"stream": stream, "body_bytes": len(body),
-		"input_len_est": estimateInputTokens(body),
-	})
+	inputLen := estimateInputTokens(body)
+	recvFields := map[string]any{
+		"stream": stream, "body_bytes": len(body), "input_len_est": inputLen,
+	}
+	if prefixKeyHash != "" {
+		// emit ONLY the hashed key + bounded token count (never the raw key)
+		recvFields["cache_eligible"] = true
+		recvFields["prefix_key_hash"] = prefixKeyHash
+		recvFields["prefix_tokens"] = prefixTokens
+	}
+	p.emit("LOCAL_REQUEST_RECEIVED", reqID, routeID, recvFields)
 
 	// Admit into bounded queue (lifecycle/health/drain gate inside Admit).
 	tk, aerr := p.queue.Admit(r.Context(), reqID, routeID, p.cfg.BackendID, p.cfg.HostID, p.cfg.DeviceID, AdmissionGate(p.gate))
@@ -127,14 +172,87 @@ func (p *Proxy) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		"queue_wait_ms": float64((tk.dispatchMono - tk.enqueuedMono).Microseconds()) / 1000.0,
 	})
 
+	// Observe explicit-prefix locality AT DISPATCH: this backend is about to serve (and cache) the
+	// prefix, so the NEXT request for the same key on this backend sees a warm cache. Metadata only.
+	if p.cacheObs != nil && prefixKeyHash != "" {
+		tok := prefixTokens
+		if tok <= 0 {
+			tok = inputLen // fall back to estimated input length as the prefix upper bound
+		}
+		if tok > 0 {
+			p.cacheObs.Observe(prefixKeyHash, tok)
+		}
+	}
+
 	// Dispatch to vLLM.
 	tk.Transition(StateDispatching, "dispatch", p.queue.mono())
 	p.emit("VLLM_DISPATCH_STARTED", reqID, routeID, nil)
+
+	// Optional token-level work accounting: reserve+activate before dispatch, release after relay.
+	// Confidence is unknown at the sidecar (the router owns cache locality), so explicit-mode prefix
+	// tokens are treated as a high-confidence local hint; otherwise reserve on full prompt tokens.
+	var resPrefill, resDecode int
+	if p.work != nil {
+		conf := 0.0
+		matched := 0
+		if prefixKeyHash != "" {
+			conf = 1.0 // explicit-mode local hint is deterministic on THIS backend
+			matched = prefixTokens
+		}
+		resPrefill, resDecode = p.work.ReserveTokens(inputLen, matched, expectedOutputTokens(body), conf)
+		p.work.Activate(resPrefill, resDecode)
+		defer p.work.Release(resPrefill, resDecode)
+	}
+
 	if stream {
 		p.relayStream(w, r, tk, body, reqID, routeID)
 	} else {
 		p.relayJSON(w, r, tk, body, reqID, routeID)
 	}
+}
+
+// expectedOutputTokens reads max_tokens from the body as the decode-work estimate (default 128).
+func expectedOutputTokens(body []byte) int {
+	var p struct {
+		MaxTokens int `json:"max_tokens"`
+	}
+	if json.Unmarshal(body, &p) == nil && p.MaxTokens > 0 {
+		return p.MaxTokens
+	}
+	return 128
+}
+
+// extractAndStripPrefixHeaders reads the opaque experiment prefix key + token count, returns the
+// HASHED key (never raw) and a bounded token count, and ALWAYS removes the experimental headers from
+// the request so they are never forwarded to vLLM. Returns ("", 0) when disabled or absent.
+func (p *Proxy) extractAndStripPrefixHeaders(r *http.Request) (keyHash string, tokens int) {
+	rawKey := r.Header.Get("X-Cache-Prefix-Key")
+	rawTok := r.Header.Get("X-Cache-Prefix-Tokens")
+	// strip unconditionally (hygiene): these are experimental and must not reach vLLM.
+	r.Header.Del("X-Cache-Prefix-Key")
+	r.Header.Del("X-Cache-Prefix-Tokens")
+	if !p.cfg.ExplicitHeaderEnabled || rawKey == "" {
+		return "", 0
+	}
+	keyHash = hashOpaqueKey(rawKey)
+	if rawTok != "" {
+		if n, err := strconv.Atoi(rawTok); err == nil && n > 0 {
+			tokens = n
+			if p.cfg.MaxPrefixTokens > 0 && tokens > p.cfg.MaxPrefixTokens {
+				tokens = p.cfg.MaxPrefixTokens
+			}
+		}
+	}
+	return keyHash, tokens
+}
+
+// hashOpaqueKey returns a hex SHA-256 of the raw opaque key. The raw key NEVER leaves this function.
+func hashOpaqueKey(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
 }
 
 func (p *Proxy) upstreamRequest(ctx context.Context, body []byte, reqID, routeID string) (*http.Response, time.Time, error) {
@@ -369,5 +487,3 @@ func writeErr(w http.ResponseWriter, status int, code, reqID, detail string) {
 }
 
 func ms(d time.Duration) float64 { return float64(d.Microseconds()) / 1000.0 }
-
-var _ = strconv.Itoa

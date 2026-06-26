@@ -1,5 +1,16 @@
 # GPU Host Sidecar (cross-vendor: NVIDIA H100 + AMD MI350X)
 
+> **Round 5 — cache-aware admission sidecar.** Added a pluggable cache-observation plane
+> (`internal/cache`: bounded thread-safe prefix index + `disabled|explicit|vllm_events` providers),
+> a cache-aware analytical routing baseline (`cache_aware_estimated_finish`, documented coefficients,
+> no magic constants), `GET /v1/cache` + bounded `gpu_cache_*` metrics, optional token-level work
+> accounting, and full per-candidate RL state emission. Audit found vLLM 0.23 native KV events are
+> real but request-level matching is NOT trustworthy on this stack (raw-token requirement +
+> version-coupled hashing; MI350X runs no vLLM) — so the validated path is the deterministic
+> explicit-prefix provider + safe load-only fallback; native events are metadata-only behind a
+> documented blocker. Validated E2E on real H100 (vLLM 0.23) + MI350X. All cache features default OFF.
+> 176 tests, race-clean. See `artifacts/cache_aware_sidecar/implementation_report.md`.
+
 > **Round 4 — end-to-end vLLM flow.** Added a Global Router Gateway (`cmd/router`), a local data
 > plane in the sidecar (`-data-plane`: bounded admission queue + OpenAI proxy + transparent SSE relay
 > via `internal/dataplane`), a vLLM runtime adapter (`internal/runtime/vllm`), and an async

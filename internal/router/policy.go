@@ -14,6 +14,18 @@ type RequestFeatures struct {
 	InputLenEst     int
 	RequestedOutput int
 	SLOClass        string
+
+	// --- cache-locality features (optional; all zero/empty when cache observation disabled) ---
+	// PrefixKeyHash is the HASHED opaque prefix key (never the raw X-Cache-Prefix-Key). Empty when
+	// the request carries no prefix key or explicit mode is disabled.
+	PrefixKeyHash string
+	// PrefixTokens is the request-claimed reusable prefix length in tokens (bounded/sanitized).
+	PrefixTokens int
+	// CacheEligible is true when the request carries a usable prefix key (PrefixKeyHash != "").
+	CacheEligible bool
+	// SessionKeyHash is reserved for future session-affinity routing (HASHED; never raw). Unused by
+	// the baseline policies; emitted for the RL state only when present.
+	SessionKeyHash string
 }
 
 // RouteDecision is a policy's output.
@@ -127,8 +139,13 @@ func (p *HealthGatedLeastPressurePolicy) SelectBackend(_ RequestFeatures, snap *
 		Reason: "min(pressure=queue+runtime+kv / stability)"}, nil
 }
 
-// PolicyByName returns a baseline policy by name.
-func PolicyByName(name string) RoutingPolicy {
+// PolicyByName returns a baseline policy by name. For cache-aware policies, pass a non-nil locator
+// (the Registry) so per-request prefix matching uses the materialized directory; nil is tolerated
+// (falls back to BackendState.PrefixMatchedTokens / 0).
+func PolicyByName(name string) RoutingPolicy { return PolicyByNameWithLocator(name, nil) }
+
+// PolicyByNameWithLocator is PolicyByName with an explicit cache locator for cache-aware policies.
+func PolicyByNameWithLocator(name string, locator CacheLocator) RoutingPolicy {
 	switch name {
 	case "round_robin":
 		return &RoundRobinPolicy{}
@@ -138,6 +155,10 @@ func PolicyByName(name string) RoutingPolicy {
 		return &LeastRuntimeWaitingPolicy{}
 	case "health_gated_least_pressure":
 		return &HealthGatedLeastPressurePolicy{}
+	case "cache_aware_estimated_finish":
+		return NewCacheAwarePolicy(DefaultCacheAwareConfig(), locator)
+	case "cache_affinity_only":
+		return NewCacheAffinityOnlyPolicy(locator)
 	default:
 		return &LeastQueuedPolicy{}
 	}

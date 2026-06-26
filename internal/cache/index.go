@@ -1,0 +1,401 @@
+package cache
+
+import (
+	"sort"
+	"sync"
+	"time"
+)
+
+// IndexConfig bounds and ages the prefix index.
+type IndexConfig struct {
+	MaxEntries int           // hard cap on stored entries (LRU-ish eviction by oldest update)
+	EntryTTL   time.Duration // entries older than this are treated as absent on lookup/snapshot
+	StaleAfter time.Duration // if no event for this long, the whole index is considered stale (conf=0)
+	BlockSize  int           // default block size in tokens (native); informational for explicit
+}
+
+// DefaultIndexConfig returns conservative bounds.
+func DefaultIndexConfig() IndexConfig {
+	return IndexConfig{
+		MaxEntries: 100_000,
+		EntryTTL:   10 * time.Minute,
+		StaleAfter: 30 * time.Second,
+		BlockSize:  16,
+	}
+}
+
+// Index is a bounded, thread-safe prefix/block METADATA store. It is the shared core used by every
+// provider. It tracks event sequencing (gap detection), a reset epoch (runtime restart / all-clear),
+// staleness, and bounded eviction. It NEVER stores raw token ids or content.
+//
+// Concurrency: a single sync.RWMutex guards all state. Writes (events) take the write lock; reads
+// (Lookup/Snapshot) take the read lock. The hot path never calls into the Index synchronously for
+// routing — the router reads a materialized Snapshot — but Lookup is cheap and lock-bounded.
+type Index struct {
+	cfg IndexConfig
+	now func() time.Time // injectable clock for tests
+
+	mu      sync.RWMutex
+	entries map[string]*IndexEntry
+
+	// sequencing / freshness
+	lastSeq    int64
+	haveSeq    bool
+	resetEpoch int64
+	lastUpdate time.Time
+	startedAt  time.Time
+
+	// counters (monotonic; for /v1/cache + metrics)
+	eventsReceived   uint64
+	eventsDropped    uint64
+	sequenceGaps     uint64
+	duplicates       uint64
+	outOfOrder       uint64
+	staleInvalidated uint64
+	resets           uint64
+}
+
+// NewIndex builds an empty index.
+func NewIndex(cfg IndexConfig) *Index {
+	if cfg.MaxEntries <= 0 {
+		cfg.MaxEntries = DefaultIndexConfig().MaxEntries
+	}
+	now := time.Now
+	return &Index{
+		cfg: cfg, now: now, entries: make(map[string]*IndexEntry),
+		startedAt: now(), lastUpdate: time.Time{},
+	}
+}
+
+// WithClock overrides the clock (tests only).
+func (idx *Index) WithClock(f func() time.Time) *Index {
+	idx.mu.Lock()
+	idx.now = f
+	idx.startedAt = f()
+	idx.mu.Unlock()
+	return idx
+}
+
+// --- event application -------------------------------------------------------------------------
+
+// checkSeqLocked validates a sequence number against the last seen one. Returns:
+//
+//	accept=true   -> apply this event
+//	accept=false  -> drop (duplicate or strictly-old out-of-order event)
+//
+// It also detects gaps (seq jumped forward by >1) and counts them. Caller holds the write lock.
+func (idx *Index) checkSeqLocked(seq int64) (accept bool) {
+	if !idx.haveSeq {
+		idx.haveSeq = true
+		idx.lastSeq = seq
+		return true
+	}
+	switch {
+	case seq == idx.lastSeq+1:
+		idx.lastSeq = seq
+		return true
+	case seq == idx.lastSeq:
+		// exact duplicate of the most recent event
+		idx.duplicates++
+		return false
+	case seq < idx.lastSeq:
+		// arrived out of order / replayed; older than current head. Count, but still apply because
+		// store/remove are idempotent on metadata and a late store is still useful locality info.
+		idx.outOfOrder++
+		return true
+	default: // seq > lastSeq+1 : GAP. We missed events -> we can no longer trust completeness.
+		idx.sequenceGaps++
+		idx.lastSeq = seq
+		// A gap means the index may be missing removes/stores. We do NOT wipe (the surviving entries
+		// are still hints), but freshness/confidence is degraded via confidenceLocked.
+		return true
+	}
+}
+
+// ApplyStore records a block/prefix store event. key is the opaque (hashed) block key; parent is the
+// parent block key ("" if none); matchedTokens is the token count this block represents; blockSize is
+// the runtime block size; seq is the event sequence number (monotone per publisher).
+func (idx *Index) ApplyStore(seq int64, key, parent string, matchedTokens, blockSize int) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.eventsReceived++
+	if !idx.checkSeqLocked(seq) {
+		return
+	}
+	t := idx.now()
+	idx.lastUpdate = t
+	if e, ok := idx.entries[key]; ok {
+		e.Present = true
+		e.Parent = parent
+		if matchedTokens > 0 {
+			e.MatchedTokens = matchedTokens
+		}
+		if blockSize > 0 {
+			e.BlockSize = blockSize
+		}
+		e.LastSeq = seq
+		e.UpdatedAt = t
+		return
+	}
+	idx.entries[key] = &IndexEntry{
+		Key: key, Parent: parent, MatchedTokens: matchedTokens, BlockSize: blockSize,
+		Present: true, LastSeq: seq, UpdatedAt: t,
+	}
+	idx.evictIfNeededLocked()
+}
+
+// ApplyRemove records a block removal. The entry is marked not-present (kept briefly so a duplicate
+// remove is a no-op and so we can answer "was present" honestly), then eligible for eviction.
+func (idx *Index) ApplyRemove(seq int64, key string) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.eventsReceived++
+	if !idx.checkSeqLocked(seq) {
+		return
+	}
+	t := idx.now()
+	idx.lastUpdate = t
+	if e, ok := idx.entries[key]; ok {
+		e.Present = false
+		e.LastSeq = seq
+		e.UpdatedAt = t
+	}
+	// removing a key we never saw is a no-op (idempotent)
+}
+
+// ApplyClear handles AllBlocksCleared: drop all locality. Bumps the reset epoch.
+func (idx *Index) ApplyClear(seq int64) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.eventsReceived++
+	_ = idx.checkSeqLocked(seq) // advances/repairs seq tracking; clear applies regardless
+	idx.entries = make(map[string]*IndexEntry)
+	idx.resetEpoch++
+	idx.resets++
+	idx.lastUpdate = idx.now()
+}
+
+// Reset wipes all state and bumps the reset epoch. Used on detected runtime restart / provider
+// (re)start. Sequence tracking is reset so the next event re-seeds lastSeq without a false gap.
+func (idx *Index) Reset(reason string) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	idx.entries = make(map[string]*IndexEntry)
+	idx.haveSeq = false
+	idx.lastSeq = 0
+	idx.resetEpoch++
+	idx.resets++
+	idx.lastUpdate = time.Time{}
+	idx.startedAt = idx.now()
+}
+
+// evictIfNeededLocked enforces MaxEntries by removing the oldest-updated entries. Caller holds wlock.
+func (idx *Index) evictIfNeededLocked() {
+	over := len(idx.entries) - idx.cfg.MaxEntries
+	if over <= 0 {
+		return
+	}
+	// find `over` oldest entries by UpdatedAt. MaxEntries is large and evictions rare, so a simple
+	// scan is acceptable and avoids a second heap structure.
+	for over > 0 {
+		var oldestKey string
+		var oldest time.Time
+		first := true
+		for k, e := range idx.entries {
+			if first || e.UpdatedAt.Before(oldest) {
+				oldest = e.UpdatedAt
+				oldestKey = k
+				first = false
+			}
+		}
+		if oldestKey == "" {
+			return
+		}
+		delete(idx.entries, oldestKey)
+		idx.eventsDropped++ // an evicted entry is locality we can no longer answer for
+		over--
+	}
+}
+
+// --- reads -------------------------------------------------------------------------------------
+
+// isStaleLocked reports whether the index is too old to trust. Caller holds at least the read lock.
+func (idx *Index) isStaleLocked() bool {
+	if idx.cfg.StaleAfter <= 0 {
+		return false
+	}
+	if idx.lastUpdate.IsZero() {
+		return true // never received an event
+	}
+	return idx.now().Sub(idx.lastUpdate) > idx.cfg.StaleAfter
+}
+
+// confidenceLocked computes a [0,1] confidence from freshness and recent gap pressure. Caller holds
+// at least the read lock. Gaps reduce confidence; staleness zeroes it.
+func (idx *Index) confidenceLocked() float64 {
+	if idx.lastUpdate.IsZero() || idx.isStaleLocked() {
+		return 0
+	}
+	age := idx.now().Sub(idx.lastUpdate)
+	conf := 1.0
+	// linear freshness decay across the stale window
+	if idx.cfg.StaleAfter > 0 {
+		conf = 1.0 - age.Seconds()/idx.cfg.StaleAfter.Seconds()
+		if conf < 0 {
+			conf = 0
+		}
+	}
+	// gap penalty: each unresolved gap knocks confidence down (bounded). A clean stream has 0 gaps.
+	if idx.sequenceGaps > 0 {
+		penalty := 0.25 * float64(idx.sequenceGaps)
+		if penalty > 0.75 {
+			penalty = 0.75
+		}
+		conf *= (1.0 - penalty)
+	}
+	if conf < 0 {
+		conf = 0
+	}
+	return conf
+}
+
+// lookupKeyLocked returns the matched-token total for a key if present & not TTL-expired. Caller
+// holds the read lock.
+func (idx *Index) lookupKeyLocked(key string) (tokens int, present bool) {
+	e, ok := idx.entries[key]
+	if !ok || !e.Present {
+		return 0, false
+	}
+	if idx.cfg.EntryTTL > 0 && idx.now().Sub(e.UpdatedAt) > idx.cfg.EntryTTL {
+		return 0, false // expired
+	}
+	return e.MatchedTokens, true
+}
+
+// LookupKey answers whether a single opaque key is currently cached, and for how many tokens.
+// Returns confidence-adjusted result (0 tokens when stale). This is the primitive the explicit
+// provider uses.
+func (idx *Index) LookupKey(key string) (tokens int, confidence float64, ageMs int64) {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+	if idx.isStaleLocked() {
+		return 0, 0, idx.ageMsLocked()
+	}
+	conf := idx.confidenceLocked()
+	t, present := idx.lookupKeyLocked(key)
+	if !present {
+		return 0, conf, idx.ageMsLocked()
+	}
+	return t, conf, idx.ageMsLocked()
+}
+
+func (idx *Index) ageMsLocked() int64 {
+	if idx.lastUpdate.IsZero() {
+		return -1
+	}
+	return idx.now().Sub(idx.lastUpdate).Milliseconds()
+}
+
+// SnapshotMeta returns bounded metadata about the index for /v1/cache and metrics. It also performs
+// stale invalidation accounting (write path) when the index has gone stale since the last snapshot.
+func (idx *Index) SnapshotMeta() Snapshot {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+	stale := idx.isStaleLocked()
+	if stale && !idx.lastUpdate.IsZero() {
+		idx.staleInvalidated++
+	}
+	conf := idx.confidenceLocked()
+	present := 0
+	for _, e := range idx.entries {
+		if e.Present {
+			present++
+		}
+	}
+	age := int64(-1)
+	if !idx.lastUpdate.IsZero() {
+		age = idx.now().Sub(idx.lastUpdate).Milliseconds()
+	}
+	return Snapshot{
+		Confidence:            conf,
+		SnapshotAgeMs:         age,
+		LastEventSequence:     idx.lastSeq,
+		CacheResetEpoch:       idx.resetEpoch,
+		IndexEntries:          present,
+		IndexMaxEntries:       idx.cfg.MaxEntries,
+		EventsReceivedTotal:   idx.eventsReceived,
+		EventsDroppedTotal:    idx.eventsDropped,
+		SequenceGapsTotal:     idx.sequenceGaps,
+		StaleInvalidations:    idx.staleInvalidated,
+		DuplicateEventsTotal:  idx.duplicates,
+		OutOfOrderEventsTotal: idx.outOfOrder,
+		ResetsTotal:           idx.resets,
+		Ready:                 !stale && !idx.lastUpdate.IsZero(),
+		UpdatedAt:             idx.lastUpdate,
+	}
+}
+
+// Len returns the number of entries (present or tombstoned) — for tests/metrics.
+func (idx *Index) Len() int {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+	return len(idx.entries)
+}
+
+// ResetEpoch returns the current reset epoch.
+func (idx *Index) ResetEpoch() int64 {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+	return idx.resetEpoch
+}
+
+// Directory returns a bounded snapshot of present, fresh prefix keys -> matched token counts. It is
+// the data the router materializes (off the hot path) so a routing decision can match the current
+// request's prefix key with an O(1) LOCAL map lookup — never a per-request network query. Keys are
+// already opaque (hashed); no content is exposed. Capped at `max` entries (most-recently-updated).
+// Returns an empty (non-nil) map when stale or empty.
+func (idx *Index) Directory(max int) map[string]int {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+	out := make(map[string]int)
+	if idx.isStaleLocked() || idx.lastUpdate.IsZero() {
+		return out // stale => publish nothing (router falls back to no-cache)
+	}
+	if max <= 0 {
+		max = idx.cfg.MaxEntries
+	}
+	ttl := idx.cfg.EntryTTL
+	now := idx.now()
+	// If under the cap, just emit all present+fresh entries.
+	if len(idx.entries) <= max {
+		for k, e := range idx.entries {
+			if e.Present && (ttl <= 0 || now.Sub(e.UpdatedAt) <= ttl) {
+				out[k] = e.MatchedTokens
+			}
+		}
+		return out
+	}
+	// Over the cap: select the `max` most-recently-updated present+fresh entries. Bounded scan +
+	// sort by recency (the directory cap is small relative to MaxEntries in practice).
+	cand := make([]dirEntry, 0, len(idx.entries))
+	for k, e := range idx.entries {
+		if e.Present && (ttl <= 0 || now.Sub(e.UpdatedAt) <= ttl) {
+			cand = append(cand, dirEntry{k, e.UpdatedAt, e.MatchedTokens})
+		}
+	}
+	sort.Slice(cand, func(i, j int) bool { return cand[i].t.After(cand[j].t) })
+	if len(cand) > max {
+		cand = cand[:max]
+	}
+	for _, c := range cand {
+		out[c.key] = c.tok
+	}
+	return out
+}
+
+// dirEntry is a transient row used to select the most-recent directory entries under the cap.
+type dirEntry struct {
+	key string
+	t   time.Time
+	tok int
+}

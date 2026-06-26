@@ -25,6 +25,7 @@ type fakeVLLM struct {
 	preFirstErr bool // close connection before any chunk
 	srv         *httptest.Server
 	cancelled   chan struct{}
+	lastHeaders http.Header // headers seen on the last forwarded request (for strip tests)
 }
 
 func newFakeVLLM() *fakeVLLM {
@@ -44,6 +45,9 @@ func (f *fakeVLLM) chat(w http.ResponseWriter, r *http.Request) {
 	sc, chunks, delay, preErr := f.statusCode, f.streamChunks, f.streamDelay, f.preFirstErr
 	f.mu.Unlock()
 	body, _ := io.ReadAll(r.Body)
+	f.mu.Lock()
+	f.lastHeaders = r.Header.Clone()
+	f.mu.Unlock()
 	stream := strings.Contains(string(body), `"stream":true`) || strings.Contains(string(body), `"stream": true`)
 	if sc != 200 {
 		w.WriteHeader(sc)

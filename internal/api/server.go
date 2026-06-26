@@ -23,6 +23,7 @@ type Server struct {
 	chatHandler http.HandlerFunc
 	runtimeSnap func() any
 	queueSnap   func() any
+	cacheSnap   func() any // optional cache-observation snapshot (nil unless cache-aware enabled)
 }
 
 func New(sup *engine.Supervisor, version string) *Server {
@@ -35,6 +36,7 @@ func New(sup *engine.Supervisor, version string) *Server {
 	s.mux.HandleFunc("/v1/drain", s.drain)
 	s.mux.HandleFunc("/v1/runtime", s.runtime)
 	s.mux.HandleFunc("/v1/queue", s.queue)
+	s.mux.HandleFunc("/v1/cache", s.cache)
 	s.mux.HandleFunc("/v1/chat/completions", s.chat)
 	s.mux.HandleFunc("/metrics", s.metrics)
 	s.mux.HandleFunc("/", s.index)
@@ -48,6 +50,10 @@ func (s *Server) AttachDataPlane(chat http.HandlerFunc, runtimeSnap, queueSnap f
 	s.runtimeSnap = runtimeSnap
 	s.queueSnap = queueSnap
 }
+
+// AttachCacheObserver wires the optional cache-observation snapshot provider for GET /v1/cache.
+// Safe to skip; when nil, /v1/cache reports disabled.
+func (s *Server) AttachCacheObserver(cacheSnap func() any) { s.cacheSnap = cacheSnap }
 
 func (s *Server) Handler() http.Handler { return s.mux }
 
@@ -79,6 +85,19 @@ func (s *Server) queue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, s.queueSnap())
+}
+
+// cache: bounded cache-observation METADATA (no prefix hashes as a flat list of content; the
+// directory map keys are already opaque hashes). Reports disabled when no observer is attached.
+func (s *Server) cache(w http.ResponseWriter, r *http.Request) {
+	if s.cacheSnap == nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"enabled": false, "provider": "disabled", "supported": false,
+			"match_supported": false, "ready": false, "confidence": 0.0,
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, s.cacheSnap())
 }
 
 
@@ -272,9 +291,62 @@ func (s *Server) metrics(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(&b, "gpu_ecc_uncorrectable_total%s %d\n", l, d.Health.RASUncorrectable.Value)
 		}
 	}
+	s.cacheMetrics(&b, hs.Hostname)
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(b.String()))
+}
+
+// cacheMetrics appends bounded-cardinality cache-observation metrics. NO prefix hashes are ever used
+// as labels (only a fixed host/provider label set). Called from metrics() when an observer exists.
+func (s *Server) cacheMetrics(b *strings.Builder, host string) {
+	if s.cacheSnap == nil {
+		return
+	}
+	snap, ok := s.cacheSnap().(map[string]any)
+	if !ok {
+		// snapshot is a typed struct; re-marshal through JSON to a generic map for label-free export.
+		raw, _ := json.Marshal(s.cacheSnap())
+		_ = json.Unmarshal(raw, &snap)
+	}
+	if snap == nil {
+		return
+	}
+	provider, _ := snap["provider"].(string)
+	if provider == "" {
+		provider = "unknown"
+	}
+	lbl := fmt.Sprintf(`{host=%q,provider=%q}`, host, provider)
+	gB := func(name, help, key string) {
+		v, _ := snap[key].(bool)
+		fmt.Fprintf(b, "# HELP %s %s\n# TYPE %s gauge\n", name, help, name)
+		n := 0
+		if v {
+			n = 1
+		}
+		fmt.Fprintf(b, "%s%s %d\n", name, lbl, n)
+	}
+	gF := func(name, help, key string) {
+		v, _ := snap[key].(float64)
+		fmt.Fprintf(b, "# HELP %s %s\n# TYPE %s gauge\n", name, help, name)
+		fmt.Fprintf(b, "%s%s %g\n", name, lbl, v)
+	}
+	gB("gpu_cache_supported", "1 if cache observation is supported", "supported")
+	gB("gpu_cache_match_supported", "1 if per-request prefix matching is trustworthy", "match_supported")
+	gB("gpu_cache_ready", "1 if cache observation is ready (fresh, non-stale)", "ready")
+	gF("gpu_cache_confidence", "cache locality confidence [0,1]", "confidence")
+	gF("gpu_cache_snapshot_age_ms", "age of the cache snapshot in ms", "snapshot_age_ms")
+	gF("gpu_cache_last_event_sequence", "last ingested event sequence number", "last_event_sequence")
+	gF("gpu_cache_reset_epoch", "cache reset epoch (bumped on clear/restart)", "cache_reset_epoch")
+	gF("gpu_cache_index_entries", "present entries in the local prefix index", "index_entries")
+	gF("gpu_cache_kv_headroom", "KV headroom [0,1] (1-kv_util) when measurable", "kv_headroom")
+	gF("gpu_cache_events_received_total", "total cache events received", "events_received_total")
+	gF("gpu_cache_events_dropped_total", "total cache entries evicted/dropped", "events_dropped_total")
+	gF("gpu_cache_sequence_gaps_total", "total detected event sequence gaps", "sequence_gaps_total")
+	gF("gpu_cache_stale_invalidations_total", "total stale-state invalidations", "stale_invalidations_total")
+	gF("gpu_cache_duplicate_events_total", "total duplicate events dropped", "duplicate_events_total")
+	gF("gpu_cache_out_of_order_events_total", "total out-of-order events", "out_of_order_events_total")
+	gF("gpu_cache_resets_total", "total cache resets (clear/restart)", "resets_total")
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {

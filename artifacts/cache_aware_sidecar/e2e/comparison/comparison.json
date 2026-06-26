@@ -1,0 +1,82 @@
+[
+  {
+    "policy": "round_robin",
+    "arrival": "steady",
+    "total": 120,
+    "ok": 120,
+    "failed": 0,
+    "throughput_rps": 26.3,
+    "wall_s": 4.56,
+    "ttft_p50_ms": 171.8,
+    "ttft_p95_ms": 1062.2,
+    "e2e_p50_ms": 171.8,
+    "e2e_p95_ms": 1062.2,
+    "assignment": {
+      "h100-gpu3": 120
+    }
+  },
+  {
+    "policy": "least_queued",
+    "arrival": "steady",
+    "total": 120,
+    "ok": 120,
+    "failed": 0,
+    "throughput_rps": 29.55,
+    "wall_s": 4.06,
+    "ttft_p50_ms": 132.8,
+    "ttft_p95_ms": 956.7,
+    "e2e_p50_ms": 132.8,
+    "e2e_p95_ms": 956.7,
+    "assignment": {
+      "h100-gpu3": 120
+    }
+  },
+  {
+    "policy": "health_gated_least_pressure",
+    "arrival": "steady",
+    "total": 120,
+    "ok": 120,
+    "failed": 0,
+    "throughput_rps": 19.78,
+    "wall_s": 6.07,
+    "ttft_p50_ms": 192.7,
+    "ttft_p95_ms": 1360.4,
+    "e2e_p50_ms": 192.7,
+    "e2e_p95_ms": 1360.4,
+    "assignment": {
+      "h100-gpu3": 120
+    }
+  },
+  {
+    "policy": "cache_affinity_only",
+    "arrival": "steady",
+    "total": 120,
+    "ok": 120,
+    "failed": 0,
+    "throughput_rps": 24.3,
+    "wall_s": 4.94,
+    "ttft_p50_ms": 175.1,
+    "ttft_p95_ms": 1106.2,
+    "e2e_p50_ms": 175.1,
+    "e2e_p95_ms": 1106.2,
+    "assignment": {
+      "h100-gpu3": 120
+    }
+  },
+  {
+    "policy": "cache_aware_estimated_finish",
+    "arrival": "steady",
+    "total": 120,
+    "ok": 120,
+    "failed": 0,
+    "throughput_rps": 24.18,
+    "wall_s": 4.96,
+    "ttft_p50_ms": 144.4,
+    "ttft_p95_ms": 1212.8,
+    "e2e_p50_ms": 144.4,
+    "e2e_p95_ms": 1212.8,
+    "assignment": {
+      "h100-gpu3": 120
+    }
+  }
+]
