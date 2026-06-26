@@ -189,3 +189,69 @@ routing experiment needs.
 - **Trustworthy, validated path:** explicit-prefix mode (cross-vendor, deterministic) + the
   load-only fallback. This is what the E2E results and the cache-aware analytical baseline are built
   on.
+
+
+---
+
+# ADDENDUM (2026-06-25, later) — REAL vLLM on MI350X: native KV events DO work on AMD
+
+The original audit above tested the **deployed** runtimes and found MI350X running a placeholder HF
+server (`mini_oai_server.py`) with no events. **That was a property of the placeholder, not of AMD.**
+A subsequent investigation found a **real ROCm vLLM build** on the MI350X node and validated it live.
+This addendum CORRECTS the cross-vendor findings.
+
+## What was found
+- `~/edmm_rocm_env` (Python 3.12) has **real vLLM `0.21.1rc1`** + `torch 2.10.0+rocm7.0`, source tree
+  at `~/vllm-src`. All 8 MI350X GPUs visible (`torch.cuda.is_available()=True, device_count=8`).
+- Launched real vLLM on MI350X GPU (Qwen2.5-0.5B, `--enforce-eager`, port 8001) with native KV events:
+  `--kv-events-config '{"enable_kv_cache_events":true,"publisher":"zmq","endpoint":"tcp://*:5557","topic":"kv@mi350x"}'`.
+- It **serves real completions** (`owned_by:vllm`, `system_fingerprint:vllm-0.21.1...`) and has **real
+  prefix caching** (`vllm:prefix_cache_hits_total` climbed 560->1152 under a shared-prefix workload,
+  observed through the cache-aware sidecar's runtime adapter — parsing verified).
+
+## Native KV events on AMD — schema is IDENTICAL to NVIDIA
+A live ZMQ SUB client decoded msgpack `KVEventBatch` frames from the MI350X publisher. Real captured
+event (sanitized — token_ids shown only to document the field, then DROPPED on ingest):
+```
+["BlockStored",
+ [8738107393821479040, 5857302262393217556, 14240730501071962744],  # block_hashes
+ 369486939572088658,                                                 # parent_block_hash
+ [10950, 17847, 13, 151645, 198, 151644, 872, 198, ...],             # token_ids (RAW — present on AMD too)
+ 16, null, "GPU", null, [null], 0, "full_attention", null]
+```
+- 3-frame multipart `(topic, 8-byte BE seq, msgpack payload)`, `BlockStored/BlockRemoved/
+  AllBlocksCleared`, same field order as NVIDIA vLLM 0.23. **No schema incompatibility between
+  vendors.**
+- `BlockStored.token_ids` carries RAW prompt tokens **on AMD as well** → the privacy concern and the
+  metadata-only design (drop token_ids at the transport boundary) apply to BOTH vendors.
+
+## Corrections to the original audit
+| Original claim | Corrected finding |
+|---|---|
+| "MI350X exposes no KV events" | TRUE for the mini HF server; **FALSE for real ROCm vLLM** (events work) |
+| "AMD and NVIDIA schemas materially incompatible" | **FALSE** — identical schema. The gap was real-vLLM vs mini-server, not NVIDIA vs AMD |
+| Hard-stop #4 (incompatible AMD/NVIDIA schemas) | **Does not apply** once real ROCm vLLM is used |
+
+## What is UNCHANGED (the real blocker stands, now on BOTH vendors)
+Per-request prefix→block **matching** is still NOT trustworthy: it requires reproducing vLLM's
+internal `ExternalBlockHash` over raw token_ids (privacy-violating + version-coupled). The
+`vllm_events` provider therefore remains **metadata-only** (`match_supported=false`) on BOTH H100 and
+MI350X. We VALIDATED ingestion of REAL AMD events end-to-end (12 real sanitized MI350X BlockStored
+events replayed through the provider — `internal/cache/vllm_real_amd_test.go`), confirming the index,
+sequencing, snapshot, and the honest "no fabricated match" behavior on real hardware.
+
+## New ROCm gotcha (memory profiler)
+Real vLLM's startup memory profiler intermittently computes a bogus `non_torch_increase ~241 GiB`
+for a 0.93 GiB model under GPU contention → `Available KV cache memory: -0.02 GiB` → EngineCore
+fails. `--gpu-memory-utilization` does NOT fix it. **Workaround that works: `--kv-cache-memory-bytes
+8589934592`** (explicit 8 GiB) bypasses the profiler → clean startup (`GPU KV cache size: 699,040
+tokens`).
+
+## Bottom line
+Real vLLM (and real prefix caching, and native KV events) **run on MI350X**. The cache-aware sidecar
+reads real MI350X runtime metrics correctly and ingests real MI350X native KV events. The only thing
+still blocked — on both vendors equally — is trustworthy per-request native block matching, which is
+why the explicit-prefix provider remains the validated routing path.
+Evidence: `artifacts/cache_aware_sidecar/e2e/mi350x_realvllm/` (native_kv_events_evidence.md,
+sanitized_amd_events.jsonl, vllm_server.log, launch_real.sh) + `experiments/kv_event_bridge.py` +
+`internal/cache/vllm_real_amd_test.go`.
