@@ -20,13 +20,14 @@ import (
 )
 
 func main() {
-	var listen, backendsJSON, policyName, collectorURL string
+	var listen, backendsJSON, policyName, collectorURL, profilesJSON string
 	var snapInterval time.Duration
 	var maxRetries int
 	flag.StringVar(&listen, "listen", "127.0.0.1:9090", "client-facing listen address")
 	flag.StringVar(&backendsJSON, "backends", "", "JSON array of backends [{id,vendor,sidecar_url,snapshot_url}]")
-	flag.StringVar(&policyName, "policy", "least_queued", "round_robin|least_queued|least_runtime_waiting|health_gated_least_pressure")
+	flag.StringVar(&policyName, "policy", "least_queued", "round_robin|least_queued|least_runtime_waiting|health_gated_least_pressure|cache_aware_estimated_finish|cache_affinity_only")
 	flag.StringVar(&collectorURL, "collector-url", "", "trajectory collector URL (empty = disabled)")
+	flag.StringVar(&profilesJSON, "profiles", "", `optional per-backend static service profiles, JSON map id->{"decode_ms_per_token":..,"prefill_ms_per_token":..}; absent => global fallback`)
 	flag.DurationVar(&snapInterval, "snapshot-interval", 500*time.Millisecond, "backend snapshot refresh cadence")
 	flag.IntVar(&maxRetries, "max-retries", 1, "max cross-backend pre-first-token retries")
 	flag.Parse()
@@ -39,6 +40,12 @@ func main() {
 	}
 	if len(backends) == 0 {
 		log.Fatalf("no backends configured (use -backends)")
+	}
+	var profiles map[string]router.BackendProfile
+	if profilesJSON != "" {
+		if err := json.Unmarshal([]byte(profilesJSON), &profiles); err != nil {
+			log.Fatalf("parse -profiles: %v", err)
+		}
 	}
 
 	reg := router.NewRegistry(backends, snapInterval)
@@ -53,7 +60,7 @@ func main() {
 	emitter.Start()
 	defer emitter.Stop()
 
-	gw := router.NewGateway(reg, router.PolicyByNameWithLocator(policyName, reg), emitter, maxRetries)
+	gw := router.NewGatewayWithProfiles(reg, router.PolicyByNameWithProfiles(policyName, profiles), emitter, maxRetries, profiles)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/chat/completions", gw.ChatCompletions)

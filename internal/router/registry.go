@@ -22,10 +22,30 @@ type Backend struct {
 	SnapshotURL string `json:"snapshot_url"` // sidecar base for /v1/status,/v1/queue,/v1/runtime
 }
 
-// BackendSnapshot is the materialized, immutable view the policy reads (no hot-path scraping).
+// BackendSnapshot is the materialized, immutable view the policy reads (no hot-path scraping). It is
+// a single ATOMIC routing snapshot: backend states AND the per-backend cache directory share one
+// Generation, so a routing decision can never mix new backend/cache metadata with an old (or newer)
+// directory. Published with one atomic pointer swap.
 type BackendSnapshot struct {
-	Backends  []BackendState `json:"backends"`
-	Timestamp time.Time      `json:"timestamp"`
+	Generation uint64         `json:"generation"`
+	Backends   []BackendState `json:"backends"`
+	Timestamp  time.Time      `json:"timestamp"`
+	// CacheDirectory maps backendID -> (opaque hashed prefix key -> READY matched token count). Only
+	// READY prefixes appear (a WARMING prefix is never a routable hit). Bounded cardinality.
+	CacheDirectory map[string]map[string]int `json:"-"`
+}
+
+// LookupPrefixTokens returns the matched READY prefix-token count for a backend+prefix key FROM THE
+// GIVEN SNAPSHOT (not a mutable global) — so the policy resolves locality from the exact same
+// generation passed to SelectBackend. 0 when absent/unknown.
+func (s *BackendSnapshot) LookupPrefixTokens(backendID, prefixKeyHash string) int {
+	if s == nil || prefixKeyHash == "" || s.CacheDirectory == nil {
+		return 0
+	}
+	if d, ok := s.CacheDirectory[backendID]; ok {
+		return d[prefixKeyHash]
+	}
+	return 0
 }
 
 // BackendState is one backend's routing-facing state in the snapshot.
@@ -49,10 +69,20 @@ type BackendState struct {
 
 	// --- measured service rate (derived from cumulative counters via deltas; NOT raw totals) ---
 	// GenTokensPerSec is the measured generation throughput (tokens/s) computed by differencing the
-	// cumulative vllm:generation_tokens_total counter over wall time between snapshots. 0 + Supported
+	// cumulative vllm:generation_tokens_total counter over wall time between snapshots. This is
+	// TELEMETRY ONLY — it is NOT used as per-request decode speed by the cache-aware policy (which
+	// uses a static service profile) to avoid a busy->"faster"->busier feedback loop. 0 + Supported
 	// =false until two consecutive scrapes exist.
-	GenTokensPerSec       float64 `json:"gen_tokens_per_sec"`
-	ServiceRateSupported  bool    `json:"service_rate_supported"`
+	GenTokensPerSec      float64 `json:"gen_tokens_per_sec"`
+	ServiceRateSupported bool    `json:"service_rate_supported"`
+	// RuntimeInstanceID uniquely fingerprints the upstream vLLM PROCESS (process_start_time_seconds).
+	// Two backends with the SAME non-zero value share one runtime/KV cache — an INVALID two-replica
+	// experiment. 0 when unknown.
+	RuntimeInstanceID float64 `json:"runtime_instance_id"`
+	// RuntimeEndpointID is a stable hash of the sidecar's (host + vllm-url + boot). It is the robust
+	// runtime-identity signal: distinct vLLM endpoints => distinct ids; two sidecars over the same
+	// vLLM => same id. Used to refuse "two replicas over one runtime" experiments.
+	RuntimeEndpointID string `json:"runtime_endpoint_id"`
 
 	// --- cache-locality state (materialized off the hot path from sidecar GET /v1/cache) ---
 	CacheObservationSupported bool    `json:"cache_observation_supported"`
@@ -81,13 +111,9 @@ type Registry struct {
 	interval time.Duration
 	stop     chan struct{}
 	wg       sync.WaitGroup
+	gen      atomic.Uint64 // monotone routing-snapshot generation
 
-	// cacheDir holds a per-backend bounded directory of opaque prefix-key -> matched tokens,
-	// materialized OFF the hot path. The policy reads it with an O(1) local map lookup per request
-	// (no per-request network query). Guarded by dirMu; swapped atomically per refresh.
-	dirMu        sync.RWMutex
-	cacheDir     map[string]map[string]int // backendID -> (prefixKeyHash -> matchedTokens)
-	cacheDirMax  int
+	cacheDirMax int
 
 	// prev holds the previous scrape's cumulative counters per backend for service-rate deltas.
 	prevMu sync.Mutex
@@ -105,30 +131,16 @@ func NewRegistry(backends []Backend, interval time.Duration) *Registry {
 	r := &Registry{
 		backends: backends, interval: interval, stop: make(chan struct{}),
 		client:      &http.Client{Timeout: 1 * time.Second},
-		cacheDir:    map[string]map[string]int{},
 		cacheDirMax: 4096,
 		prev:        map[string]counterSample{},
 	}
-	empty := &BackendSnapshot{Timestamp: time.Now()}
+	empty := &BackendSnapshot{Timestamp: time.Now(), CacheDirectory: map[string]map[string]int{}}
 	r.snap.Store(empty)
 	return r
 }
 
-// LookupPrefixTokens returns the matched prefix-token count for a backend+prefix key from the
-// materialized cache directory (O(1) local lookup; NO network I/O). 0 when not present/unknown.
-func (r *Registry) LookupPrefixTokens(backendID, prefixKeyHash string) int {
-	if prefixKeyHash == "" {
-		return 0
-	}
-	r.dirMu.RLock()
-	defer r.dirMu.RUnlock()
-	if d, ok := r.cacheDir[backendID]; ok {
-		return d[prefixKeyHash]
-	}
-	return 0
-}
-
-// Snapshot returns the latest materialized snapshot (hot-path safe; no I/O).
+// Snapshot returns the latest materialized snapshot (hot-path safe; no I/O). The returned pointer is
+// immutable; backend states AND the cache directory in it share one Generation.
 func (r *Registry) Snapshot() *BackendSnapshot { return r.snap.Load() }
 
 func (r *Registry) Start() {
@@ -152,7 +164,8 @@ func (r *Registry) loop() {
 	}
 }
 
-// refresh polls each backend's snapshot endpoints in parallel and builds an immutable snapshot.
+// refresh polls each backend's snapshot endpoints in parallel and builds ONE immutable, atomically
+// published routing snapshot (backend states + per-backend cache directory + a monotone generation).
 func (r *Registry) refresh() {
 	states := make([]BackendState, len(r.backends))
 	dirs := make([]map[string]int, len(r.backends))
@@ -165,17 +178,18 @@ func (r *Registry) refresh() {
 		}(i, b)
 	}
 	wg.Wait()
-	r.snap.Store(&BackendSnapshot{Backends: states, Timestamp: time.Now()})
-	// swap the materialized cache directory atomically (off the hot path).
-	newDir := make(map[string]map[string]int, len(r.backends))
+	dir := make(map[string]map[string]int, len(r.backends))
 	for i, b := range r.backends {
 		if dirs[i] != nil {
-			newDir[b.ID] = dirs[i]
+			dir[b.ID] = dirs[i]
 		}
 	}
-	r.dirMu.Lock()
-	r.cacheDir = newDir
-	r.dirMu.Unlock()
+	gen := r.gen.Add(1)
+	// ONE atomic pointer swap: backend states and the cache directory share this generation. No
+	// reader can observe new backend metadata with an old directory (or vice versa).
+	r.snap.Store(&BackendSnapshot{
+		Generation: gen, Backends: states, Timestamp: time.Now(), CacheDirectory: dir,
+	})
 }
 
 func (r *Registry) pollBackend(b Backend) (BackendState, map[string]int) {
@@ -221,6 +235,12 @@ func (r *Registry) pollBackend(b Backend) (BackendState, map[string]int) {
 		genTotal := fieldVal(rt["generation_tokens_per_s"])
 		genSupported := fieldSupported(rt["generation_tokens_per_s"])
 		st.GenTokensPerSec, st.ServiceRateSupported = r.serviceRate(b.ID, genTotal, genSupported)
+		if id, ok := rt["runtime_instance_id"].(float64); ok {
+			st.RuntimeInstanceID = id
+		}
+		if eid, ok := rt["runtime_endpoint_id"].(string); ok {
+			st.RuntimeEndpointID = eid
+		}
 	}
 	// /v1/cache — bounded cache-locality METADATA, materialized off the hot path.
 	if c := r.getJSON(b.SnapshotURL + "/v1/cache"); c != nil {

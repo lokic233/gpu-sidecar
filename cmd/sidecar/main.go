@@ -3,6 +3,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"log"
 	"net/http"
@@ -246,9 +249,22 @@ func main() {
 			log.Printf("cache observation ENABLED: mode=%s explicit_header=%v index_max=%d ttl=%s stale_after=%s",
 				cmode, cacheExplicitHeader, cacheIndexMax, cacheEntryTTL, cacheStaleAfter)
 		}
-
+		// runtimeEndpointID is a STABLE identity of THIS sidecar's upstream runtime endpoint
+		// (host + vllm-url + boot id). Two sidecars fronting DIFFERENT vLLM processes get different
+		// ids; two sidecars over the SAME vLLM (host+url) get the same id — used to refuse invalid
+		// "two replicas over one runtime" experiments (more robust than the low-precision
+		// process_start_time fingerprint).
+		runtimeEndpointID := hashID(host + "|" + vllmBaseURL + "|" + bootID)
 		apiServer.AttachDataPlane(proxy.ChatCompletions,
-			func() any { return vadapter.Snapshot() },
+			func() any {
+				snap := vadapter.Snapshot()
+				m := map[string]any{}
+				b, _ := json.Marshal(snap)
+				_ = json.Unmarshal(b, &m)
+				m["runtime_endpoint_id"] = runtimeEndpointID
+				m["vllm_base_url"] = vllmBaseURL
+				return m
+			},
 			func() any {
 				qs := q.Snapshot()
 				if workAcct == nil {
@@ -293,6 +309,11 @@ func main() {
 	sctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(sctx)
+}
+
+func hashID(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])[:16]
 }
 
 func readFirstLine(path string) string {

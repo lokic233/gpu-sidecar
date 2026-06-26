@@ -21,6 +21,7 @@ import (
 type Gateway struct {
 	reg     *Registry
 	policy  RoutingPolicy
+	scorer  *CacheAwarePolicy // canonical analytical base-score generator for RL state
 	emitter *trajectory.Emitter
 	client  *http.Client // long-timeout streaming client to sidecars
 
@@ -29,8 +30,15 @@ type Gateway struct {
 }
 
 func NewGateway(reg *Registry, policy RoutingPolicy, emitter *trajectory.Emitter, maxRetries int) *Gateway {
+	return NewGatewayWithProfiles(reg, policy, emitter, maxRetries, nil)
+}
+
+// NewGatewayWithProfiles builds a gateway whose RL-state scorer uses the given per-backend profiles
+// (so the emitted base score matches the cache-aware policy's view).
+func NewGatewayWithProfiles(reg *Registry, policy RoutingPolicy, emitter *trajectory.Emitter, maxRetries int, profiles map[string]BackendProfile) *Gateway {
 	return &Gateway{
 		reg: reg, policy: policy, emitter: emitter, maxRetries: maxRetries,
+		scorer: NewCacheAwarePolicy(DefaultCacheAwareConfig(), profiles),
 		client: &http.Client{
 			Timeout: 0, // streaming: no global deadline; rely on ctx + sidecar
 			Transport: &http.Transport{
@@ -90,7 +98,8 @@ func (g *Gateway) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 
 	snap := g.reg.Snapshot()
 	g.emit("BACKEND_SNAPSHOT_READ", reqID, "", "", map[string]any{
-		"snapshot_age_ms": ms(time.Since(snap.Timestamp)), "n_backends": len(snap.Backends)})
+		"snapshot_age_ms": ms(time.Since(snap.Timestamp)), "n_backends": len(snap.Backends),
+		"snapshot_generation": snap.Generation})
 	// Emit the full per-candidate analytical RL state (every routing decision can be reconstructed).
 	g.emitCandidateState(reqID, feat, snap)
 
@@ -123,7 +132,7 @@ func (g *Gateway) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		}
 		g.emit("ROUTE_DECIDED", reqID, routeID, dec.BackendID, map[string]any{
 			"policy": dec.PolicyName, "policy_version": dec.PolicyVersion, "reason": dec.Reason,
-			"decision_latency_ms": decLatency, "attempt": attempt})
+			"decision_latency_ms": decLatency, "attempt": attempt, "snapshot_generation": snap.Generation})
 		g.emit("ROUTE_ATTEMPT_STARTED", reqID, routeID, dec.BackendID, nil)
 
 		retryable, sent := g.forward(w, r, bs, body, reqID, routeID, stream, clientStart)
@@ -332,9 +341,9 @@ var _ = context.Background
 // computes scores via the cache-aware policy regardless of the active policy, so the RL state is
 // always present even when routing with a baseline. No content, no raw keys.
 func (g *Gateway) emitCandidateState(reqID string, feat RequestFeatures, snap *BackendSnapshot) {
-	// Use the cache-aware analytical policy as the canonical base-score generator for RL state.
-	scorer := NewCacheAwarePolicy(DefaultCacheAwareConfig(), g.reg)
-	scores := scorer.ScoreBreakdown(feat, snap)
+	// Use the shared cache-aware analytical policy as the canonical base-score generator for RL state
+	// (same profiles as the active policy; resolves locality from THIS snapshot's generation).
+	scores := g.scorer.ScoreBreakdown(feat, snap)
 	byID := map[string]CandidateScore{}
 	for _, s := range scores {
 		byID[s.BackendID] = s
@@ -355,6 +364,7 @@ func (g *Gateway) emitCandidateState(reqID string, feat RequestFeatures, snap *B
 			"lifecycle_state":  b.LifecycleState,
 			"stability_score":  b.StabilityScore,
 			"snapshot_age_ms":  b.SnapshotAgeMs,
+			"snapshot_generation": snap.Generation,
 			// service rate (delta-derived, NOT cumulative total)
 			"gen_tokens_per_sec":     b.GenTokensPerSec,
 			"service_rate_supported": b.ServiceRateSupported,

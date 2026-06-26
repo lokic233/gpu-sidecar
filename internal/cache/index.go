@@ -45,6 +45,10 @@ type Index struct {
 	lastUpdate time.Time
 	startedAt  time.Time
 
+	// trust state (current correctness condition, NOT a cumulative penalty)
+	unresolvedGap bool // true after a detected sequence gap; cleared only by Reset/rebuild
+	wasStale      bool // tracks fresh<->stale transitions so the stale counter increments once
+
 	// counters (monotonic; for /v1/cache + metrics)
 	eventsReceived   uint64
 	eventsDropped    uint64
@@ -102,14 +106,17 @@ func (idx *Index) checkSeqLocked(seq int64) (accept bool) {
 		// same batch as the most recent one — additional events from that batch. Accept.
 		return true
 	case seq < idx.lastSeq:
-		// an older batch arriving late / replayed. Apply anyway (idempotent metadata) but count.
+		// an older batch arriving late / replayed. Accept at the batch level, but PER-ENTRY ordering
+		// (enforced in ApplyStore/ApplyRemove) prevents an old event from overriding newer state.
 		idx.outOfOrder++
 		return true
-	default: // seq > lastSeq+1 : we skipped at least one whole batch -> GAP.
+	default: // seq > lastSeq+1 : we skipped at least one whole batch -> GAP (correctness condition).
 		idx.sequenceGaps++
 		idx.lastSeq = seq
-		// A gap means the index may be missing removes/stores. We do NOT wipe (the surviving entries
-		// are still hints), but freshness/confidence is degraded via confidenceLocked.
+		// A gap means the directory may have missed a store OR a removal. We can no longer trust
+		// completeness: set the unresolved-gap trust flag (confidence -> 0, no matchable directory)
+		// until a verified Reset/rebuild restores trust. This is NOT a cumulative soft penalty.
+		idx.unresolvedGap = true
 		return true
 	}
 }
@@ -129,8 +136,13 @@ func (idx *Index) ApplyStore(seq int64, key, parent string, matchedTokens, block
 	if e, ok := idx.entries[key]; ok {
 		// A store for a key we already have AT THE SAME SEQ is a true duplicate (e.g. replayed batch
 		// or at-least-once redelivery). Count it and no-op — the entry is unchanged.
-		if e.Present && e.LastSeq == seq {
+		if e.LastSeq == seq && e.Present {
 			idx.duplicates++
+			return
+		}
+		// PER-ENTRY ORDERING: an OLD store (seq < this entry's last seq) must not resurrect a newer
+		// removal or clobber newer state. Drop it (counted at batch level as out-of-order).
+		if seq < e.LastSeq {
 			return
 		}
 		e.Present = true
@@ -164,6 +176,15 @@ func (idx *Index) ApplyRemove(seq int64, key string) {
 	t := idx.now()
 	idx.lastUpdate = t
 	if e, ok := idx.entries[key]; ok {
+		// PER-ENTRY ORDERING: an OLD remove (seq < this entry's last seq) must not delete a NEWER
+		// store. Drop it. An equal-seq remove for an already-removed entry is an idempotent duplicate.
+		if seq < e.LastSeq {
+			return
+		}
+		if seq == e.LastSeq && !e.Present {
+			idx.duplicates++
+			return
+		}
 		e.Present = false
 		e.LastSeq = seq
 		e.UpdatedAt = t
@@ -180,6 +201,9 @@ func (idx *Index) ApplyClear(seq int64) {
 	idx.entries = make(map[string]*IndexEntry)
 	idx.resetEpoch++
 	idx.resets++
+	// AllBlocksCleared is a verified rebuild boundary: the directory is now consistent again, so the
+	// unresolved-gap trust flag is cleared (trust restored after a verified reset).
+	idx.unresolvedGap = false
 	idx.lastUpdate = idx.now()
 }
 
@@ -193,6 +217,9 @@ func (idx *Index) Reset(reason string) {
 	idx.lastSeq = 0
 	idx.resetEpoch++
 	idx.resets++
+	// a verified reset/rebuild restores sequence trust.
+	idx.unresolvedGap = false
+	idx.wasStale = false
 	idx.lastUpdate = time.Time{}
 	idx.startedAt = idx.now()
 }
@@ -244,6 +271,12 @@ func (idx *Index) confidenceLocked() float64 {
 	if idx.lastUpdate.IsZero() || idx.isStaleLocked() {
 		return 0
 	}
+	// Unresolved sequence gap => we cannot trust completeness. Confidence is 0 (and no matchable
+	// directory is published) until a verified Reset/rebuild restores trust. NOT a soft cumulative
+	// penalty that lingers forever.
+	if idx.unresolvedGap {
+		return 0
+	}
 	age := idx.now().Sub(idx.lastUpdate)
 	conf := 1.0
 	// linear freshness decay across the stale window
@@ -253,19 +286,14 @@ func (idx *Index) confidenceLocked() float64 {
 			conf = 0
 		}
 	}
-	// gap penalty: each unresolved gap knocks confidence down (bounded). A clean stream has 0 gaps.
-	if idx.sequenceGaps > 0 {
-		penalty := 0.25 * float64(idx.sequenceGaps)
-		if penalty > 0.75 {
-			penalty = 0.75
-		}
-		conf *= (1.0 - penalty)
-	}
 	if conf < 0 {
 		conf = 0
 	}
 	return conf
 }
+
+// sequenceHealthyLocked reports whether the directory is currently trustworthy (no unresolved gap).
+func (idx *Index) sequenceHealthyLocked() bool { return !idx.unresolvedGap }
 
 // lookupKeyLocked returns the matched-token total for a key if present & not TTL-expired. Caller
 // holds the read lock.
@@ -310,9 +338,12 @@ func (idx *Index) SnapshotMeta() Snapshot {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 	stale := idx.isStaleLocked()
-	if stale && !idx.lastUpdate.IsZero() {
+	// Increment the stale-invalidation counter ONCE per fresh->stale transition (not on every poll
+	// while already stale). Track the current stale state explicitly.
+	if stale && !idx.wasStale && !idx.lastUpdate.IsZero() {
 		idx.staleInvalidated++
 	}
+	idx.wasStale = stale
 	conf := idx.confidenceLocked()
 	present := 0
 	for _, e := range idx.entries {
@@ -338,7 +369,9 @@ func (idx *Index) SnapshotMeta() Snapshot {
 		DuplicateEventsTotal:  idx.duplicates,
 		OutOfOrderEventsTotal: idx.outOfOrder,
 		ResetsTotal:           idx.resets,
-		Ready:                 !stale && !idx.lastUpdate.IsZero(),
+		SequenceHealthy:       idx.sequenceHealthyLocked(),
+		UnresolvedGap:         idx.unresolvedGap,
+		Ready:                 !stale && !idx.unresolvedGap && !idx.lastUpdate.IsZero(),
 		UpdatedAt:             idx.lastUpdate,
 	}
 }
@@ -366,8 +399,8 @@ func (idx *Index) Directory(max int) map[string]int {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 	out := make(map[string]int)
-	if idx.isStaleLocked() || idx.lastUpdate.IsZero() {
-		return out // stale => publish nothing (router falls back to no-cache)
+	if idx.isStaleLocked() || idx.unresolvedGap || idx.lastUpdate.IsZero() {
+		return out // stale OR unresolved gap => publish nothing (router falls back to no-cache)
 	}
 	if max <= 0 {
 		max = idx.cfg.MaxEntries

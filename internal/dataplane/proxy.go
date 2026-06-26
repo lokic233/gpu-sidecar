@@ -41,13 +41,20 @@ func DefaultProxyConfig() ProxyConfig {
 		MaxPrefixTokens: 1 << 20}
 }
 
-// CacheObserver is the minimal sidecar-side hook the proxy uses to record/observe prefix locality.
-// Implemented by the explicit cache provider; nil for non-cache sidecars. The proxy passes only a
-// HASHED key — never the raw header value.
+// CacheObserver is the residency lifecycle hook the proxy uses to drive the per-prefix state machine
+// (ABSENT->WARMING->READY). Implemented by the explicit cache provider; nil for non-cache sidecars.
+// The proxy passes only a HASHED key — never the raw header value. A WARMING prefix is never a
+// reusable hit, so a request that aborts before readiness leaves no false-positive cache entry.
 type CacheObserver interface {
-	// Observe records that this backend has now served (cached) the given hashed prefix key for the
-	// given token count, so the next request for the same key sees a warm cache.
-	Observe(keyHash string, tokens int)
+	// BeginWarm: this cache-eligible request was dispatched to the runtime (ABSENT->WARMING).
+	BeginWarm(keyHash string, tokens int)
+	// MarkReady: the warming request produced its first token / completed (WARMING->READY).
+	MarkReady(keyHash string)
+	// AbortWarm: the warming request failed before readiness (WARMING->ABSENT if last warmer).
+	AbortWarm(keyHash string)
+	// Lookup reports the current residency state + reusable READY token count for a key (no I/O).
+	// Used at admission to size the work reservation conservatively.
+	LookupState(keyHash string) (ready bool, readyTokens int)
 }
 
 // Gate decides whether the backend currently admits requests. Returns nil to admit.
@@ -155,15 +162,36 @@ func (p *Proxy) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 	p.emit("QUEUE_ENTERED", reqID, routeID, nil)
 
+	// Reserve token work at ADMISSION (queued bucket), conservatively. Size from the LOCAL residency
+	// state: only a READY (trustworthy) prefix lets us reserve on uncached tokens; ABSENT/WARMING/
+	// unknown reserve on the FULL prompt. The reservation is carried on the ticket and released
+	// exactly once on the terminal path. (Hard request-count/inflight bounds are unchanged.)
+	if p.work != nil {
+		readyTrust := false
+		readyTokens := 0
+		if p.cacheObs != nil && prefixKeyHash != "" {
+			readyTrust, readyTokens = p.cacheObs.LookupState(prefixKeyHash)
+		}
+		tk.reservation = p.work.Reserve(inputLen, readyTokens, expectedOutputTokens(body), readyTrust)
+	}
+	tk.prefixKeyHash = prefixKeyHash
+	tk.prefixTokens = prefixTokens
+	if prefixKeyHash != "" && tk.prefixTokens <= 0 {
+		tk.prefixTokens = inputLen
+	}
+
 	if err := tk.WaitForDispatch(); err != nil {
 		switch err {
 		case ErrQueueTimeout:
+			p.resolveTerminal(tk, false) // queued reservation released; nothing was warming
 			p.emit("QUEUE_TIMED_OUT", reqID, routeID, nil)
 			writeErr(w, http.StatusServiceUnavailable, "QUEUE_TIMEOUT", reqID, "queued too long")
 		case ErrCancelled:
+			p.resolveTerminal(tk, false)
 			p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "in_queue"})
 			// client gone; nothing to write
 		default:
+			p.resolveTerminal(tk, false)
 			writeErr(w, http.StatusServiceUnavailable, "DISPATCH_FAILED", reqID, err.Error())
 		}
 		return
@@ -172,42 +200,54 @@ func (p *Proxy) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		"queue_wait_ms": float64((tk.dispatchMono - tk.enqueuedMono).Microseconds()) / 1000.0,
 	})
 
-	// Observe explicit-prefix locality AT DISPATCH: this backend is about to serve (and cache) the
-	// prefix, so the NEXT request for the same key on this backend sees a warm cache. Metadata only.
-	if p.cacheObs != nil && prefixKeyHash != "" {
-		tok := prefixTokens
-		if tok <= 0 {
-			tok = inputLen // fall back to estimated input length as the prefix upper bound
-		}
-		if tok > 0 {
-			p.cacheObs.Observe(prefixKeyHash, tok)
-		}
+	// Begin WARMING at dispatch (ABSENT->WARMING): the request is now being served by the runtime,
+	// but the prefix is NOT a reusable hit until it produces a first token / completes successfully.
+	if p.cacheObs != nil && tk.prefixKeyHash != "" && tk.prefixTokens > 0 {
+		p.cacheObs.BeginWarm(tk.prefixKeyHash, tk.prefixTokens)
+		tk.warmBegun = true
 	}
 
 	// Dispatch to vLLM.
 	tk.Transition(StateDispatching, "dispatch", p.queue.mono())
 	p.emit("VLLM_DISPATCH_STARTED", reqID, routeID, nil)
 
-	// Optional token-level work accounting: reserve+activate before dispatch, release after relay.
-	// Confidence is unknown at the sidecar (the router owns cache locality), so explicit-mode prefix
-	// tokens are treated as a high-confidence local hint; otherwise reserve on full prompt tokens.
-	var resPrefill, resDecode int
-	if p.work != nil {
-		conf := 0.0
-		matched := 0
-		if prefixKeyHash != "" {
-			conf = 1.0 // explicit-mode local hint is deterministic on THIS backend
-			matched = prefixTokens
-		}
-		resPrefill, resDecode = p.work.ReserveTokens(inputLen, matched, expectedOutputTokens(body), conf)
-		p.work.Activate(resPrefill, resDecode)
-		defer p.work.Release(resPrefill, resDecode)
+	// Move the work reservation queued->active at dispatch.
+	if tk.reservation != nil {
+		tk.reservation.Activate()
 	}
 
 	if stream {
 		p.relayStream(w, r, tk, body, reqID, routeID)
 	} else {
 		p.relayJSON(w, r, tk, body, reqID, routeID)
+	}
+}
+
+// resolveTerminal runs the cache-residency + work-accounting terminal resolution EXACTLY ONCE for a
+// ticket. ready=true promotes a warming prefix to READY (first token / 2xx); ready=false aborts the
+// warm (pre-first-token failure / cancel / non-2xx / queue timeout). The work reservation is always
+// released. Idempotent: safe to call from multiple terminal paths.
+func (p *Proxy) resolveTerminal(tk *Ticket, ready bool) {
+	tk.mu.Lock()
+	if tk.resolved {
+		tk.mu.Unlock()
+		return
+	}
+	tk.resolved = true
+	warmBegun := tk.warmBegun
+	key := tk.prefixKeyHash
+	res := tk.reservation
+	tk.mu.Unlock()
+
+	if p.cacheObs != nil && warmBegun && key != "" {
+		if ready {
+			p.cacheObs.MarkReady(key)
+		} else {
+			p.cacheObs.AbortWarm(key)
+		}
+	}
+	if res != nil {
+		res.Release()
 	}
 }
 
@@ -273,6 +313,7 @@ func (p *Proxy) relayJSON(w http.ResponseWriter, r *http.Request, tk *Ticket, bo
 	resp, connStart, err := p.upstreamRequest(tk.Context(), body, reqID, routeID)
 	if err != nil {
 		p.emit("VLLM_REQUEST_FAILED", reqID, routeID, map[string]any{"err": err.Error(), "phase": "connect"})
+		p.resolveTerminal(tk, false) // pre-first-token failure -> abort warm, release work
 		p.queue.Done(tk, StateUpstreamFail, "vllm_connect_failed")
 		writeErr(w, http.StatusBadGateway, "UPSTREAM_FAILED", reqID, err.Error())
 		return
@@ -293,8 +334,10 @@ func (p *Proxy) relayJSON(w http.ResponseWriter, r *http.Request, tk *Ticket, bo
 	w.Write(out)
 	p.emit("STREAM_COMPLETED", reqID, routeID, map[string]any{"stream": false, "resp_bytes": len(out), "status": resp.StatusCode})
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		p.resolveTerminal(tk, true) // successful non-streaming completion -> WARMING->READY
 		p.queue.Done(tk, StateCompleted, "json_ok")
 	} else {
+		p.resolveTerminal(tk, false) // runtime non-2xx -> abort warm
 		p.queue.Done(tk, StateUpstreamFail, "vllm_non_2xx")
 	}
 }
@@ -305,12 +348,14 @@ func (p *Proxy) relayStream(w http.ResponseWriter, r *http.Request, tk *Ticket, 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeErr(w, http.StatusInternalServerError, "NO_FLUSH", reqID, "response writer not flushable")
+		p.resolveTerminal(tk, false)
 		p.queue.Done(tk, StateUpstreamFail, "no_flusher")
 		return
 	}
 	resp, connStart, err := p.upstreamRequest(tk.Context(), body, reqID, routeID)
 	if err != nil {
 		p.emit("VLLM_REQUEST_FAILED", reqID, routeID, map[string]any{"err": err.Error(), "phase": "connect"})
+		p.resolveTerminal(tk, false) // pre-first-token failure -> abort warm
 		p.queue.Done(tk, StateUpstreamFail, "vllm_connect_failed")
 		writeErr(w, http.StatusBadGateway, "UPSTREAM_FAILED", reqID, err.Error())
 		return
@@ -323,6 +368,7 @@ func (p *Proxy) relayStream(w http.ResponseWriter, r *http.Request, tk *Ticket, 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(resp.StatusCode)
 		w.Write(out)
+		p.resolveTerminal(tk, false) // non-200 -> abort warm
 		p.queue.Done(tk, StateUpstreamFail, "vllm_non_200_stream")
 		return
 	}
@@ -347,14 +393,17 @@ func (p *Proxy) relayStream(w http.ResponseWriter, r *http.Request, tk *Ticket, 
 		if len(line) > 0 {
 			if firstUpstream.IsZero() {
 				firstUpstream = now
+				// FIRST valid upstream model event => WARMING->READY (prefix is now genuinely cached).
+				p.resolveTerminal(tk, true)
 				p.emit("FIRST_VLLM_EVENT", reqID, routeID, map[string]any{
 					"vllm_ttft_ms_from_dispatch": float64((p.queue.mono()-tk.dispatchMono).Microseconds())/1000.0})
 			}
 			// write+flush immediately (no buffering of the full answer)
 			if _, werr := w.Write(line); werr != nil {
-				// downstream (router/client) gone -> this is a CANCELLATION, not an upstream
-				// partial failure. Cancel upstream and account it as cancelled.
+				// downstream (router/client) gone -> this is a CANCELLATION. The prefix already
+				// produced a token (READY); resolveTerminal(true) above already ran. Just release work.
 				tk.cancel()
+				p.resolveTerminal(tk, true)
 				p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "downstream_write_fail"})
 				p.queue.Done(tk, StateCancelled, "downstream_gone")
 				return
@@ -379,20 +428,24 @@ func (p *Proxy) relayStream(w http.ResponseWriter, r *http.Request, tk *Ticket, 
 			cancelled := tk.Context().Err() != nil || errors.Is(err, context.Canceled)
 			if firstDownstream.IsZero() {
 				if cancelled {
+					p.resolveTerminal(tk, false) // cancelled before any token -> abort warm
 					p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "pre_first_event"})
 					p.queue.Done(tk, StateCancelled, "cancelled_pre_first_event")
 					return
 				}
 				// no bytes sent yet -> treat as upstream failure (router may retry)
+				p.resolveTerminal(tk, false) // pre-first-token failure -> abort warm
 				p.emit("VLLM_REQUEST_FAILED", reqID, routeID, map[string]any{"err": err.Error(), "phase": "pre_first_event"})
 				p.queue.Done(tk, StateUpstreamFail, "upstream_err_pre_first_event")
 				return
 			}
 			if cancelled {
+				p.resolveTerminal(tk, true) // already produced a token (READY); release work
 				p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "mid_stream", "events": eventCount, "bytes": byteCount})
 				p.queue.Done(tk, StateCancelled, "client_cancelled_mid_stream")
 				return
 			}
+			p.resolveTerminal(tk, true) // partial stream AFTER first token -> prefix was cached; release work
 			p.emit("PARTIAL_STREAM_FAILED", reqID, routeID, map[string]any{
 				"err": err.Error(), "events": eventCount, "bytes": byteCount})
 			p.queue.Done(tk, StatePartialStream, "upstream_err_mid_stream")
@@ -402,12 +455,16 @@ func (p *Proxy) relayStream(w http.ResponseWriter, r *http.Request, tk *Ticket, 
 		select {
 		case <-tk.Context().Done():
 			tk.cancel()
+			// if a token already arrived, firstUpstream is set and resolveTerminal(true) already ran;
+			// otherwise this is a pre-first-token cancel.
+			p.resolveTerminal(tk, !firstUpstream.IsZero())
 			p.emit("UPSTREAM_CANCELLED", reqID, routeID, map[string]any{"phase": "mid_stream"})
 			p.queue.Done(tk, StateCancelled, "client_cancelled_mid_stream")
 			return
 		default:
 		}
 	}
+	p.resolveTerminal(tk, !firstUpstream.IsZero()) // clean completion: ready iff a token was produced
 	p.emit("STREAM_COMPLETED", reqID, routeID, map[string]any{
 		"stream": true, "events": eventCount, "bytes": byteCount, "saw_done": sawDone})
 	p.queue.Done(tk, StateCompleted, "stream_ok")
